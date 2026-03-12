@@ -20,11 +20,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Optional: Non-root user
+# Non-Root User
 USER 3301
-
-# Set npm cache
-RUN npm config set cache /app/.npm-cache
 
 # Copy build artifacts
 COPY --from=build /app/node_modules ./node_modules
