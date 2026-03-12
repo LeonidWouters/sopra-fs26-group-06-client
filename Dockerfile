@@ -24,7 +24,7 @@ ENV NODE_ENV=production
 USER 3301
 
 # Set npm cache
-RUN npm config set cache /app/.npm-cache --global
+RUN npm config set cache /app/.npm-cache
 
 # Copy build artifacts
 COPY --from=build /app/node_modules ./node_modules
