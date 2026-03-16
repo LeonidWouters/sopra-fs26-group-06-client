@@ -35,6 +35,8 @@ a {
   text-decoration: none;
 }
 
+.ant-descriptions-item {}
+
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;
@@ -59,4 +61,24 @@ a {
   align-items: center;
   min-height: 100vh;
   background-color: rgb(41, 44, 59);
+}
+
+.descriptions {
+  display: flex;
+  justify-content: left;
+  align-items: center;
+  background-color: rgba(138, 138, 138, 0.65);
+  border-radius: 9px;
+  padding: 10vh;
+  margin: 5vh;
+}
+
+.userAvatar {
+  display: flex;
+  padding: 4vh 1vh;
+  align-content: start;
+}
+
+.ant-message .ant-message-notice-content {
+  color: rgb(0, 0, 0);
 }

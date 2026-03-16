@@ -13,7 +13,7 @@ interface FormFieldProps {
   value: string;
 }
 
-const Login: React.FC = () => {
+const Register: React.FC = () => {
   const router = useRouter();
   const apiService = useApi();
   const [form] = Form.useForm();
@@ -27,22 +27,25 @@ const Login: React.FC = () => {
   } = useLocalStorage<string>("token", ""); // note that the key we are selecting is "token" and the default value we are setting is an empty string
   // if you want to pick a different token, i.e "usertoken", the line above would look as follows: } = useLocalStorage<string>("usertoken", "");
 
-  const handleLogin = async (values: FormFieldProps) => {
+  const handleRegistration = async (values: FormFieldProps) => {
     try {
       // Call the API service and let it handle JSON serialization and error handling
-      const response = await apiService.post<User>("/login", values);
+      const response = await apiService.post<User>("/users", values);
 
       // Use the useLocalStorage hook that returned a setter function (setToken in line 41) to store the token if available
       if (response.token) {
         setToken(response.token);
       }
+
       // Navigate to the user overview
       router.push(`/users/${response.id}`);
     } catch (error) {
       if (error instanceof Error) {
-        alert(`Something went wrong during the login:\n${error.message}`);
+        alert(
+          `Something went wrong during the registration Process:\n${error.message}`,
+        );
       } else {
-        console.error("An unknown error occurred during login.");
+        console.error("An unknown error occurred during registration process.");
       }
     }
   };
@@ -51,10 +54,10 @@ const Login: React.FC = () => {
     <div className="login-container">
       <Form
         form={form}
-        name="login"
+        name="register"
         size="large"
         variant="outlined"
-        onFinish={handleLogin}
+        onFinish={handleRegistration}
         layout="vertical"
       >
         <Form.Item
@@ -76,16 +79,27 @@ const Login: React.FC = () => {
         </Form.Item>
         <Form.Item>
           <Button type="primary" htmlType="submit" className="login-button">
-            Login
+            Register
           </Button>
         </Form.Item>
-        <span>New around here?</span>
-        <Button type="link" href="/login/new">
-          Register now
+        <Form.Item
+          name="bio"
+          label="bio"
+          rules={[{
+            required: true,
+            message: "Please input a short Bio about yourself!",
+          }]}
+        >
+          <Input.TextArea placeholder="user bio" />
+        </Form.Item>
+        <span>Already have an account?</span>
+        <Button type="link" href="/login">
+          Go to login
         </Button>
       </Form>
+
     </div>
   );
 };
 
-export default Login;
+export default Register;
