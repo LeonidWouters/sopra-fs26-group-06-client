@@ -18,6 +18,7 @@ export default function Home() {
           height={38}
           priority
         />
+        <h1>SoPra Group 06</h1>
         <ol>
           <li>
             <code>app/page.tsx</code>{" "}

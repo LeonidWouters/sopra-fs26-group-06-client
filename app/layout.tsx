@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Student XX-XXX-XXX",
+  title: "Sopra-fs26-Group06",
   description: "sopra-fs26-template-client",
 };
 
