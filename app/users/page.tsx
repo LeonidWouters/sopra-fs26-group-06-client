@@ -55,7 +55,7 @@ const Dashboard: React.FC = () => {
     // Clear token using the returned function 'clear' from the hook
     apiService.put("/users/logout", null, token); // make a PUT request to the backend to invalidate the token, pass the token in the header for authentication
     clearToken();
-    router.push("/login");
+    router.push("/");
   };
 
   useEffect(() => {
@@ -63,7 +63,7 @@ const Dashboard: React.FC = () => {
 
     const fetchUsers = async () => {
       if (!token) {
-        router.push("/login"); // redirect if token missing
+        router.push("/"); // redirect if token missing
         return;
       }
 

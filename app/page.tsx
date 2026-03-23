@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";// use NextJS router for navigation
 import { useApi } from "@/hooks/useApi";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import { User } from "@/types/user";
-import {Button, ConfigProvider, Select, Form, Input, Segmented} from "antd";
+import {Button, ConfigProvider, Select, Form, Input, Segmented, Modal} from "antd";
 import {useState} from "react";
 import { PasswordInput } from "antd-password-input-strength";
 import Image from "next/image";
@@ -44,7 +44,23 @@ const Login: React.FC = () => {
             // Navigate to the user overview
             router.push(`/users/${response.id}`);
         } catch (error) {
-            if (error instanceof Error) {
+            if (error instanceof Error && error.message.includes("The password provided is not correct!")) {
+                Modal.error({
+                    title: "Error",
+                    content: "The password you entered is wrong. Please try again!",
+                });
+            }
+            else if (
+                error instanceof Error &&
+                error.message.includes("The username provided is not correct!")
+            ) {
+                Modal.error({
+                    title: "Error",
+                    content:
+                        "This username does not exist. Please try again or sing up!",
+                });
+            }
+            else if (error instanceof Error) {
                 alert(`Something went wrong during the login:\n${error.message}`);
             } else {
                 console.error("An unknown error occurred during login.");
@@ -60,7 +76,16 @@ const Login: React.FC = () => {
             }
             router.push(`/users/${response.id}`);
         } catch (error) {
-            if (error instanceof Error) {
+            if (
+                error instanceof Error &&
+                error.message.includes("The username provided is not unique")
+            ) {
+                Modal.error({
+                    title: "Error",
+                    content:
+                        "This username is already taken. Please log in if you already have an account or choose a different one.",
+                });}
+            else if (error instanceof Error) {
                 alert(`Something went wrong during registration:\n${error.message}`);
             } else {
                 console.error("An unknown error occurred during registration.");
