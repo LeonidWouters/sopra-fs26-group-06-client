@@ -6,4 +6,5 @@ export interface User {
   status: string | null;
   bio: string | null;
   creationDate: string | null;
+  disabilityStatus: "HEARING" | "DEAF" | null;
 }
