@@ -48,7 +48,7 @@ a {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: rgb(41, 44, 59);
+  background-color: rgb(255, 255, 255);
 }
 
 .login-button {
@@ -81,4 +81,19 @@ a {
 
 .ant-message .ant-message-notice-content {
   color: rgb(0, 0, 0);
+}
+
+.form-transition {
+    animation: smoothFade 0.5s ease-in-out forwards;
+}
+
+@keyframes smoothFade {
+    0% {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
