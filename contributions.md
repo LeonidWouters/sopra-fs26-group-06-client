@@ -31,7 +31,11 @@ reason).
 ---
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 ## Contributions Week 1 - [23.03.2026] to [30.03.2026]
+=======
+## Contributions Week 1 - 23.03.2026 to 30.03.2026
+>>>>>>> Stashed changes
 =======
 ## Contributions Week 1 - 23.03.2026 to 30.03.2026
 >>>>>>> Stashed changes
