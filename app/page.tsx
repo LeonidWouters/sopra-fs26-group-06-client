@@ -42,7 +42,7 @@ const Login: React.FC = () => {
                 setToken(response.token);
             }
             // Navigate to the user overview
-            router.push(`/users/${response.id}`);
+            router.push(`/mainpage/${response.id}`);
         } catch (error) {
             if (error instanceof Error && error.message.includes("The password provided is not correct!")) {
                 Modal.error({
@@ -74,7 +74,7 @@ const Login: React.FC = () => {
             if (response.token) {
                 setToken(response.token);
             }
-            router.push(`/users/${response.id}`);
+            router.push(`/mainpage/${response.id}`);
         } catch (error) {
             if (
                 error instanceof Error &&
