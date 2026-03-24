@@ -1,12 +1,12 @@
 "use client"; // For components that need React hooks and browser APIs, SSR (server side rendering) has to be disabled. Read more here: https://nextjs.org/docs/pages/building-your-application/rendering/server-side-rendering
 
-import { useRouter } from "next/navigation";// use NextJS router for navigation
-import { useApi } from "@/hooks/useApi";
+import {useRouter} from "next/navigation"; // use NextJS router for navigation
+import {useApi} from "@/hooks/useApi";
 import useLocalStorage from "@/hooks/useLocalStorage";
-import { User } from "@/types/user";
-import {Button, ConfigProvider, Select, Form, Input, Segmented, Modal} from "antd";
+import {User} from "@/types/user";
+import {Button, ConfigProvider, Form, Input, Modal, Segmented, Select} from "antd";
 import {useState} from "react";
-import { PasswordInput } from "antd-password-input-strength";
+import {PasswordInput} from "antd-password-input-strength";
 import Image from "next/image";
 import styles from "@/styles/page.module.css";
 // Optionally, you can import a CSS module or file for additional styling:
@@ -24,6 +24,7 @@ const Login: React.FC = () => {
     // useLocalStorage hook example use
     // The hook returns an object with the value and two functions
     // Simply choose what you need from the hook:
+    const {set: setId} = useLocalStorage<string>("id", "");
     const [authMode, setAuthMode] = useState<"login" | "register">("login");
     const {
         // value: token, // is commented out because we do not need the token value
@@ -41,6 +42,9 @@ const Login: React.FC = () => {
             if (response.token) {
                 setToken(response.token);
             }
+            if (response.id) {
+                setId(String(response.id));
+            }
             // Navigate to the user overview
             router.push(`/mainpage/${response.id}`);
         } catch (error) {
@@ -49,8 +53,7 @@ const Login: React.FC = () => {
                     title: "Error",
                     content: "The password you entered is wrong. Please try again!",
                 });
-            }
-            else if (
+            } else if (
                 error instanceof Error &&
                 error.message.includes("The username provided is not correct!")
             ) {
@@ -59,8 +62,7 @@ const Login: React.FC = () => {
                     content:
                         "This username does not exist. Please try again or sing up!",
                 });
-            }
-            else if (error instanceof Error) {
+            } else if (error instanceof Error) {
                 alert(`Something went wrong during the login:\n${error.message}`);
             } else {
                 console.error("An unknown error occurred during login.");
@@ -75,6 +77,11 @@ const Login: React.FC = () => {
                 setToken(response.token);
             }
             router.push(`/mainpage/${response.id}`);
+
+            if (response.id) {
+                setId(String(response.id));
+            }
+            router.push(`/users/${response.id}`);
         } catch (error) {
             if (
                 error instanceof Error &&
@@ -84,8 +91,8 @@ const Login: React.FC = () => {
                     title: "Error",
                     content:
                         "This username is already taken. Please log in if you already have an account or choose a different one.",
-                });}
-            else if (error instanceof Error) {
+                });
+            } else if (error instanceof Error) {
                 alert(`Something went wrong during registration:\n${error.message}`);
             } else {
                 console.error("An unknown error occurred during registration.");
@@ -107,7 +114,7 @@ const Login: React.FC = () => {
                     src={authMode === "login" ? "/unnamed-Photoroom Kopie.png" : "/unnamed-Photoroom.png"}
                     alt="Next.js logo"
                     width={400}
-                    height= {140}
+                    height={140}
                     style={{
                         width: "100%",
                         maxWidth: "400px",
@@ -120,7 +127,7 @@ const Login: React.FC = () => {
                     }}
 
                 />
-                <div style={{ width: "100%" ,maxWidth: "280px", margin: "0 auto" }}>
+                <div style={{width: "100%", maxWidth: "280px", margin: "0 auto"}}>
                     <ConfigProvider
                         theme={{
                             components: {
@@ -142,176 +149,176 @@ const Login: React.FC = () => {
                             },
                         }}
                     >
-                    <Segmented
-                        block
-                        size= "middle"
-                        shape="round"
-                        value={authMode}
-                        onChange={handleModeChange}
-                        options={[
-                            { label: 'Sign In', value: 'login' },
-                            { label: 'Sign Up', value: 'register' },
-                        ]}
-                        style={{ width: "100%", marginBottom: "15px" }}
-                    />
-                <div key={authMode} className="form-transition">
-                    {authMode === "login" ? (
-            <Form
-                form={form}
-                name="login"
-                size="large"
-                variant="outlined"
-                onFinish={handleLogin}
-                layout="vertical"
-            >
-                <Form.Item
-                    name="username"
-                    label="Username"
-                    className={styles.loginMask}
-                    rules={[{ required: true, message: "Please input your username!" }]}
-                >
-                    <Input placeholder="Enter username" />
-                </Form.Item>
-                <Form.Item
-                    name="password"
-                    label="Password"
-                    className={styles.loginMask}
-                    rules={[{
-                        required: true,
-                        message: "Please input a valid password!",
-                    }]}
-                >
-                    <Input.Password placeholder="Enter password" />
-                </Form.Item>
-                <Form.Item>
-                    <Button type="primary" htmlType="submit" className="login-button">
-                        Login
-                    </Button>
-                </Form.Item>
-            </Form>
-                    ) : (
-                        <Form
-                            form={form}
-                            name="register"
-                            size="large"
-                            variant="outlined"
-                            onFinish={handleRegistration}
-                            layout="vertical"
-                        >
-                            <Form.Item
-                                name="username"
-                                label="Username"
-                                className={styles.loginMask}
-                                style={{ marginBottom: "12px" }}
-                                rules={[{ required: true, message: "Please enter a username!" }]}
-                            >
-                                <Input placeholder="Enter username" />
-                            </Form.Item>
-                            <Form.Item
-                                name="name"
-                                label="Name"
-                                className={styles.loginMask}
-                                style={{ marginBottom: "12px" }}
-                                rules={[{ required: true, message: "Please input your name!" }]}
-                            >
-                                <Input placeholder="Enter name" />
-                            </Form.Item>
-                            <Form.Item
-                                name="bio"
-                                label="Bio"
-                                className={styles.loginMask}
-                                style={{ marginBottom: "12px" }}
-                                rules={[{ required: true, message: "Please enter a bio!" }]}
-                            >
-                                <Input.TextArea
-                                    rows={3}
-                                    placeholder="Tell something about you"
-                                    count={{
-                                        show: true,
-                                        max: 60,
-                                    }}
-                                />
-                            </Form.Item>
-                            <Form.Item
-                                name="disabilityStatus"
-                                label="Status (Hearing / Deaf)"
-                                className={styles.loginMask}
-                                style={{ marginBottom: "12px" }}
-                                rules={[{ required: true, message: "Please select your status!" }]}
-                            >
-                                <Select placeholder="Select your status">
-                                    <Select.Option value="HEARING">Hearing</Select.Option>
-                                    <Select.Option value="DEAF">Deaf</Select.Option>
-                                </Select>
-                            </Form.Item>
-                            <Form.Item
-                                name="password"
-                                label="Password"
-                                className={styles.loginMask}
-                                style={{ marginBottom: "12px" }}
-                                rules={[{ required: true, message: "Create new password" }, {
-                                    validator: async () => {
-                                        return level >= minLevel
-                                            ? Promise.resolve()
-                                            : Promise.reject(errorMessage);
-                                    },
-                                }]}
-                            >
-                                <PasswordInput
-                                    onLevelChange={setLevel}
-                                    settings={{
-                                        colorScheme: {
-                                            levels: [
-                                                "#ff4d4f",
-                                                "#faad14",
-                                                "#52c41a",
-                                                "#52c41a",
-                                                "#52c41a",
-                                            ],
-                                            noLevel: "#434343",
-                                        },
-                                        height: 5,
-                                        alwaysVisible: false,
-                                    }}
-                                    placeholder="Enter password"
-                                />
-                            </Form.Item>
-                            <Form.Item
-                                name="repeatpassword"
-                                label="Confirm password"
-                                className={styles.loginMask}
-                                dependencies={["password"]}
-                                style={{ marginBottom: "12px" }}
-                                rules={[
-                                    { required: true, message: "Please confirm your password" },
-                                    ({ getFieldValue }) => ({
-                                        validator(_, value) {
-                                            if (!value || getFieldValue("password") === value) {
-                                                return Promise.resolve();
-                                            }
-                                            return Promise.reject(new Error("The passwords do not match!"));
-                                        },
-                                    }),
-                                ]}
-                            >
-                                <Input.Password placeholder="Confirm password" />
-                            </Form.Item>
-                            <Form.Item>
-                                <Button
-                                    type="primary"
-                                    htmlType="submit"
-                                    className="login-button"
-                                    style={{ marginTop: "25px" }}
+                        <Segmented
+                            block
+                            size="middle"
+                            shape="round"
+                            value={authMode}
+                            onChange={handleModeChange}
+                            options={[
+                                {label: 'Sign In', value: 'login'},
+                                {label: 'Sign Up', value: 'register'},
+                            ]}
+                            style={{width: "100%", marginBottom: "15px"}}
+                        />
+                        <div key={authMode} className="form-transition">
+                            {authMode === "login" ? (
+                                <Form
+                                    form={form}
+                                    name="login"
+                                    size="large"
+                                    variant="outlined"
+                                    onFinish={handleLogin}
+                                    layout="vertical"
                                 >
-                                    Register
-                                </Button>
-                            </Form.Item>
-                        </Form>
-                    )}
-                </div>
+                                    <Form.Item
+                                        name="username"
+                                        label="Username"
+                                        className={styles.loginMask}
+                                        rules={[{required: true, message: "Please input your username!"}]}
+                                    >
+                                        <Input placeholder="Enter username"/>
+                                    </Form.Item>
+                                    <Form.Item
+                                        name="password"
+                                        label="Password"
+                                        className={styles.loginMask}
+                                        rules={[{
+                                            required: true,
+                                            message: "Please input a valid password!",
+                                        }]}
+                                    >
+                                        <Input.Password placeholder="Enter password"/>
+                                    </Form.Item>
+                                    <Form.Item>
+                                        <Button type="primary" htmlType="submit" className="login-button">
+                                            Login
+                                        </Button>
+                                    </Form.Item>
+                                </Form>
+                            ) : (
+                                <Form
+                                    form={form}
+                                    name="register"
+                                    size="large"
+                                    variant="outlined"
+                                    onFinish={handleRegistration}
+                                    layout="vertical"
+                                >
+                                    <Form.Item
+                                        name="username"
+                                        label="Username"
+                                        className={styles.loginMask}
+                                        style={{marginBottom: "12px"}}
+                                        rules={[{required: true, message: "Please enter a username!"}]}
+                                    >
+                                        <Input placeholder="Enter username"/>
+                                    </Form.Item>
+                                    <Form.Item
+                                        name="name"
+                                        label="Name"
+                                        className={styles.loginMask}
+                                        style={{marginBottom: "12px"}}
+                                        rules={[{required: true, message: "Please input your name!"}]}
+                                    >
+                                        <Input placeholder="Enter name"/>
+                                    </Form.Item>
+                                    <Form.Item
+                                        name="bio"
+                                        label="Bio"
+                                        className={styles.loginMask}
+                                        style={{marginBottom: "12px"}}
+                                        rules={[{required: true, message: "Please enter a bio!"}]}
+                                    >
+                                        <Input.TextArea
+                                            rows={3}
+                                            placeholder="Tell something about you"
+                                            count={{
+                                                show: true,
+                                                max: 60,
+                                            }}
+                                        />
+                                    </Form.Item>
+                                    <Form.Item
+                                        name="disabilityStatus"
+                                        label="Status (Hearing / Deaf)"
+                                        className={styles.loginMask}
+                                        style={{marginBottom: "12px"}}
+                                        rules={[{required: true, message: "Please select your status!"}]}
+                                    >
+                                        <Select placeholder="Select your status">
+                                            <Select.Option value="HEARING">Hearing</Select.Option>
+                                            <Select.Option value="DEAF">Deaf</Select.Option>
+                                        </Select>
+                                    </Form.Item>
+                                    <Form.Item
+                                        name="password"
+                                        label="Password"
+                                        className={styles.loginMask}
+                                        style={{marginBottom: "12px"}}
+                                        rules={[{required: true, message: "Create new password"}, {
+                                            validator: async () => {
+                                                return level >= minLevel
+                                                    ? Promise.resolve()
+                                                    : Promise.reject(errorMessage);
+                                            },
+                                        }]}
+                                    >
+                                        <PasswordInput
+                                            onLevelChange={setLevel}
+                                            settings={{
+                                                colorScheme: {
+                                                    levels: [
+                                                        "#ff4d4f",
+                                                        "#faad14",
+                                                        "#52c41a",
+                                                        "#52c41a",
+                                                        "#52c41a",
+                                                    ],
+                                                    noLevel: "#434343",
+                                                },
+                                                height: 5,
+                                                alwaysVisible: false,
+                                            }}
+                                            placeholder="Enter password"
+                                        />
+                                    </Form.Item>
+                                    <Form.Item
+                                        name="repeatpassword"
+                                        label="Confirm password"
+                                        className={styles.loginMask}
+                                        dependencies={["password"]}
+                                        style={{marginBottom: "12px"}}
+                                        rules={[
+                                            {required: true, message: "Please confirm your password"},
+                                            ({getFieldValue}) => ({
+                                                validator(_, value) {
+                                                    if (!value || getFieldValue("password") === value) {
+                                                        return Promise.resolve();
+                                                    }
+                                                    return Promise.reject(new Error("The passwords do not match!"));
+                                                },
+                                            }),
+                                        ]}
+                                    >
+                                        <Input.Password placeholder="Confirm password"/>
+                                    </Form.Item>
+                                    <Form.Item>
+                                        <Button
+                                            type="primary"
+                                            htmlType="submit"
+                                            className="login-button"
+                                            style={{marginTop: "25px"}}
+                                        >
+                                            Register
+                                        </Button>
+                                    </Form.Item>
+                                </Form>
+                            )}
+                        </div>
                     </ConfigProvider>
+                </div>
             </div>
-        </div>
         </div>
     );
 };
