@@ -30,17 +30,18 @@ reason).
 
 ---
 
+## Contributions Week 1 - [Begin Date] to [End Date]
 
-| **Student**       | **Date**   | **Link to Commit** | **Description**                                             | **Relevance**                                                                                                   |
-|-------------------|------------| ------------------ |-------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
-| **@LeonidWouters** | 23.03.2026 | https://github.com/LeonidWouters/sopra-fs26-group-06-server/issues/14 | First and last name are now part of user entity             | This is relevant to be able to display the names of the users in the frontend                                   |
-| **@LeonidWouters** | 23.03.2026 | https://github.com/LeonidWouters/sopra-fs26-group-06-server/pull/19 | Upon logout of user, a new token is generated in the backend | This is relevand to improve security. This ensures that a user cannot copy a token and use it for later sessions. |
-| **@tcaselas**     | 23.03.2026 | https://github.com/LeonidWouters/sopra-fs26-group-06-client/pull/3 | Implemented UI for Login and Registration Page | This is relevant for a user to be able to log in with his existing account or create a new one |
-|                   | [date]     | [Link to Commit 2] | [Brief description of the task]                             | [Why this contribution is relevant]                                                                             |
-| **[@githubUser3]** | [date]     | [Link to Commit 1] | [Brief description of the task]                             | [Why this contribution is relevant]                                                                             |
-|                   | [date]     | [Link to Commit 2] | [Brief description of the task]                             | [Why this contribution is relevant]                                                                             |
-| **[@githubUser4]** | [date]     | [Link to Commit 1] | [Brief description of the task]                             | [Why this contribution is relevant]                                                                             |
-|                   | [date]     | [Link to Commit 2] | [Brief description of the task]                             | [Why this contribution is relevant]                                                                             |
+| **Student**        | **Date** | **Link to Commit** | **Description**                 | **Relevance**                       |
+| ------------------ | -------- | ------------------ | ------------------------------- | ----------------------------------- |
+| **[@githubUser1]** | [date]   | [Link to Commit 1] | [Brief description of the task] | [Why this contribution is relevant] |
+|                    | [date]   | [Link to Commit 2] | [Brief description of the task] | [Why this contribution is relevant] |
+| **[@githubUser2]** | [date]   | [Link to Commit 1] | [Brief description of the task] | [Why this contribution is relevant] |
+|                    | [date]   | [Link to Commit 2] | [Brief description of the task] | [Why this contribution is relevant] |
+| **[@githubUser3]** | [date]   | [Link to Commit 1] | [Brief description of the task] | [Why this contribution is relevant] |
+|                    | [date]   | [Link to Commit 2] | [Brief description of the task] | [Why this contribution is relevant] |
+| **[@githubUser4]** | [date]   | [Link to Commit 1] | [Brief description of the task] | [Why this contribution is relevant] |
+|                    | [date]   | [Link to Commit 2] | [Brief description of the task] | [Why this contribution is relevant] |
 
 ---
 
