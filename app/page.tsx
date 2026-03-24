@@ -76,12 +76,11 @@ const Login: React.FC = () => {
             if (response.token) {
                 setToken(response.token);
             }
-            router.push(`/mainpage/${response.id}`);
 
             if (response.id) {
                 setId(String(response.id));
             }
-            router.push(`/users/${response.id}`);
+            router.push(`/mainpage/${response.id}`);
         } catch (error) {
             if (
                 error instanceof Error &&
@@ -113,17 +112,17 @@ const Login: React.FC = () => {
                 <Image
                     src={authMode === "login" ? "/unnamed-Photoroom Kopie.png" : "/unnamed-Photoroom.png"}
                     alt="Next.js logo"
-                    width={400}
+                    width={300}
                     height={140}
                     style={{
                         width: "100%",
-                        maxWidth: "400px",
+                        maxWidth: "300px",
                         height: "auto",
                         maxHeight: "140px",
                         display: "block",
                         margin: "0 auto",
-                        transform: authMode === "login" ? "scale(1.6)" : "scale(0.73)",
-                        marginBottom: authMode === "login" ? "40px" : "5px"
+                        transform: authMode === "login" ? "scale(1.6)" : "scale(0.8)",
+                        marginBottom: authMode === "login" ? "40px" : "20px"
                     }}
 
                 />
