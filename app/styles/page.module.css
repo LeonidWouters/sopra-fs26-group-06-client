@@ -157,9 +157,15 @@ a.secondary {
     justify-content: center;
   }
 }
+.loginMask label {
+    color: black !important;
+}
 
 @media (prefers-color-scheme: dark) {
   .logo {
     filter: invert();
+  }
+  .loginMask label {
+     color: white !important;
   }
 }

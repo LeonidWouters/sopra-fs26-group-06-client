@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useApi } from "@/hooks/useApi";
 
 interface LocalStorage<T> {
   value: T;
@@ -26,7 +27,7 @@ export default function useLocalStorage<T>(
   defaultValue: T,
 ): LocalStorage<T> {
   const [value, setValue] = useState<T>(defaultValue);
-
+  const apiService = useApi();
   // On mount, try to read the stored value
   useEffect(() => {
     if (typeof window === "undefined") return; // SSR safeguard
@@ -45,6 +46,7 @@ export default function useLocalStorage<T>(
     setValue(newVal);
     if (typeof window !== "undefined") {
       globalThis.localStorage.setItem(key, JSON.stringify(newVal));
+      console.log("useLocalStorage clear", key, newVal);
     }
   };
 
