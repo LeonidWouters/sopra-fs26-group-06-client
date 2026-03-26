@@ -9,6 +9,7 @@ import {useParams, useRouter} from 'next/navigation';
 import {User} from "@/types/user";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
+import useLocalStorage from "@/hooks/useLocalStorage";
 
 
 export interface Room {
@@ -77,6 +78,17 @@ const HomePage: React.FC = () => {
             console.error(error);
         }
     };
+    const {
+        // is commented out because we dont need to know the token value for logout
+        // is commented out because we dont need to set or update the token value
+        clear: clearToken, // all we need in this scenario is a method to clear the token
+    } = useLocalStorage<string>("token", "");
+    const handleLogout = (): void => {
+        // Clear token using the returned function 'clear' from the hook
+        apiService.put("/users/logout", null, token); // make a PUT request to the backend to invalidate the token, pass the token in the header for authentication
+        clearToken();
+        router.push("/");
+    };
 
     return (
         <div className={styles.container}>
@@ -102,7 +114,7 @@ const HomePage: React.FC = () => {
                             onClick = { () => router.push(`/users/${id}`) }>
                         My Profile
                     </Button>
-                    <Button color="danger" variant="text" icon=<LogoutOutlined/>>
+                    <Button onClick={handleLogout} color="danger" variant="text" icon=<LogoutOutlined/>>
                         Sign Out
                     </Button>
                 </div>
