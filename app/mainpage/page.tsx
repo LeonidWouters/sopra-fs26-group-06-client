@@ -5,7 +5,7 @@ import {Card, Button, Typography, message, Tag, ConfigProvider} from 'antd';
 import Image from 'next/image';
 import styles from "@/styles/mainpage.module.css";
 import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
-import {useParams, useRouter} from 'next/navigation';
+import {useRouter} from 'next/navigation';
 import {User} from "@/types/user";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
@@ -27,9 +27,9 @@ const HomePage: React.FC = () => {
     const router = useRouter();
     const apiService = useApi();
     const [user, setUser] = useState<User | null>(null);
-    const { id } = useParams();
     const { token, isReady } = useAuth();
     const [rooms, setRooms] = useState<Room[]>([]);
+    const [userId, setUserId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isReady) return; // wait for hydration
@@ -42,7 +42,13 @@ const HomePage: React.FC = () => {
 
             try {
                 if (!isReady) return;
-                const user: User = await apiService.get<User>(`/users/${id}`, token);
+                const rawId = globalThis.localStorage.getItem("id");
+
+                if (!rawId) return;
+                const parsedId = JSON.parse(rawId);
+                setUserId(parsedId);
+                const user: User = await apiService.get<User>(`/users/${parsedId}`, token);
+
                 setUser(user);
                 console.log("Fetched user:", user);
                 const fetchedRooms: Room[] = await apiService.get<Room[]>("/rooms", token);
@@ -59,7 +65,7 @@ const HomePage: React.FC = () => {
             }
         };
         fetchUser();
-    }, [apiService, isReady, token, router, id]);
+    }, [apiService, isReady, token, router]);
 
     const handleJoinRoom = async (roomId: number) => {
         try {
@@ -87,6 +93,7 @@ const HomePage: React.FC = () => {
         // Clear token using the returned function 'clear' from the hook
         apiService.put("/users/logout", null, token); // make a PUT request to the backend to invalidate the token, pass the token in the header for authentication
         clearToken();
+        globalThis.localStorage.removeItem("id");
         router.push("/");
     };
 
@@ -111,7 +118,7 @@ const HomePage: React.FC = () => {
                 </div>
                 <div className={styles.navButtons}>
                     <Button color="default" variant="text" icon=<UserOutlined/>
-                            onClick = { () => router.push(`/users/${id}`) }>
+                            onClick = { () => router.push(`/users/${userId}`) }>
                         My Profile
                     </Button>
                     <Button onClick={handleLogout} color="danger" variant="text" icon=<LogoutOutlined/>>
