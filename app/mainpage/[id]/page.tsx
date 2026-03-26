@@ -1,7 +1,7 @@
 "use client";
 
 import React, {useEffect, useState} from 'react';
-import {Card, Button, Typography, message} from 'antd';
+import {Card, Button, Typography, message, Tag, ConfigProvider} from 'antd';
 import Image from 'next/image';
 import styles from "@/styles/mainpage.module.css";
 import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
@@ -9,8 +9,17 @@ import {useParams, useRouter} from 'next/navigation';
 import {User} from "@/types/user";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
+import useLocalStorage from "@/hooks/useLocalStorage";
 
 
+export interface Room {
+    id: number;
+    name: string;
+    description: string;
+    roomStatus: "EMPTY" | "JOINABLE" | "FULL";
+    callerID: number | null;
+    calleeID: number | null;
+}
 
 const { Title, Paragraph } = Typography;
 
@@ -20,6 +29,7 @@ const HomePage: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
     const { id } = useParams();
     const { token, isReady } = useAuth();
+    const [rooms, setRooms] = useState<Room[]>([]);
 
     useEffect(() => {
         if (!isReady) return; // wait for hydration
@@ -35,6 +45,9 @@ const HomePage: React.FC = () => {
                 const user: User = await apiService.get<User>(`/users/${id}`, token);
                 setUser(user);
                 console.log("Fetched user:", user);
+                const fetchedRooms: Room[] = await apiService.get<Room[]>("/rooms", token);
+                setRooms(fetchedRooms);
+                console.log("Fetched rooms:", fetchedRooms);
             } catch (error) {
                 if (error instanceof Error) {
                     alert(
@@ -46,10 +59,39 @@ const HomePage: React.FC = () => {
             }
         };
         fetchUser();
-    }, [apiService, isReady, token, router]);
+    }, [apiService, isReady, token, router, id]);
+
+    const handleJoinRoom = async (roomId: number) => {
+        try {
+            await apiService.post(`/rooms/${roomId}/join`, null);
+
+            message.success("Successfully joined Room!");
+
+            router.push(`/rooms/${roomId}`);
+
+        } catch (error) {
+            if (error instanceof Error) {
+                message.error(`Couldn't join room: ${error.message}`);
+            } else {
+                message.error("Couldn't join room.");
+            }
+            console.error(error);
+        }
+    };
+    const {
+        // is commented out because we dont need to know the token value for logout
+        // is commented out because we dont need to set or update the token value
+        clear: clearToken, // all we need in this scenario is a method to clear the token
+    } = useLocalStorage<string>("token", "");
+    const handleLogout = (): void => {
+        // Clear token using the returned function 'clear' from the hook
+        apiService.put("/users/logout", null, token); // make a PUT request to the backend to invalidate the token, pass the token in the header for authentication
+        clearToken();
+        router.push("/");
+    };
+
     return (
         <div className={styles.container}>
-
             <div className={styles.navbar}>
                 <div className={styles.logoWrapper}>
                     <Image
@@ -72,7 +114,7 @@ const HomePage: React.FC = () => {
                             onClick = { () => router.push(`/users/${id}`) }>
                         My Profile
                     </Button>
-                    <Button color="danger" variant="text" icon=<LogoutOutlined/>>
+                    <Button onClick={handleLogout} color="danger" variant="text" icon=<LogoutOutlined/>>
                         Sign Out
                     </Button>
                 </div>
@@ -84,54 +126,63 @@ const HomePage: React.FC = () => {
                 <Paragraph className={styles.subtitle}>
                     Join a room to start a video call • Maximum 2 people per room
                 </Paragraph>
+
+
                 <div className={styles.cardContainer}>
-                    <Card className={styles.card} title="General" bordered={false} styles={{
-                        header: { backgroundColor: 'rgba(31,0,229,0.2)' },
-                        body: { backgroundColor: 'rgba(103,0,229,0.08)' }
-                    }}>
-                        <Paragraph>General conversation</Paragraph>
-                        <Button type="primary">Join Room</Button>
-                    </Card>
-                    <Card className={styles.card} title="Work" bordered={false} styles={{
-                        header: { backgroundColor: 'rgba(31,0,229,0.2)' },
-                        body: { backgroundColor: 'rgba(103,0,229,0.08)' }
-                    }}>
-                        <Paragraph>Work discussions</Paragraph>
-                        <Button type="primary">Join Room</Button>
-                    </Card>
-                    <Card className={styles.card} title="Coffee Break" bordered={false} styles={{
-                        header: { backgroundColor: 'rgba(31,0,229,0.2)' },
-                        body: { backgroundColor: 'rgba(103,0,229,0.08)' }
-                    }}>
-                        <Paragraph>Casual chat</Paragraph>
-                        <Button type="primary">Join Room</Button>
-                    </Card>
-                    <Card className={styles.card} title="Support" bordered={false} styles={{
-                        header: { backgroundColor: 'rgba(31,0,229,0.2)' },
-                        body: { backgroundColor: 'rgba(103,0,229,0.08)' }
-                    }}>
-                        <Paragraph>Help & support</Paragraph>
-                        <Button type="primary">Join Room</Button>
-                    </Card>
-                    <Card className={styles.card} title="Gaming" bordered={false} styles={{
-                        header: { backgroundColor: 'rgba(31,0,229,0.2)' },
-                        body: { backgroundColor: 'rgba(103,0,229,0.08)' }
-                    }}>
-                        <Paragraph>Play and relax</Paragraph>
-                        <Button type="primary">Join Room</Button>
-                    </Card>
-                    <Card className={styles.card} title="Study" bordered={false} styles={{
-                        header: { backgroundColor: 'rgba(31,0,229,0.2)' },
-                        body: { backgroundColor: 'rgba(103,0,229,0.08)' }
-                    }}>
-                        <Paragraph>Focus and learn</Paragraph>
-                        <Button type="primary">Join Room</Button>
-                    </Card>
+                    {rooms.length > 0 ? (
+                        rooms.map((room) => (
+                            <ConfigProvider
+                                key={room.id}
+                                theme={{
+                                    components: {
+                                        Button: {
+                                            colorPrimary: '#ffffff',
+                                            colorPrimaryHover: '#e0e0e0',
+                                            colorTextLightSolid: '#2c2c54',
+                                            colorBgContainerDisabled: '#2a2a4a',
+                                            colorTextDisabled: '#8a8aa3',
+                                            borderColorDisabled: '#2a2a4a',
+                                        }
+                                    }
+                                }}
+                            >
+                                <Card
+                                className={styles.card}
+                                title={room.name}
+                                extra={
+                                    <Tag
+                                        color={room.roomStatus === "FULL" ? "red" : "green"}
+                                        style={{ margin: 0 }}
+                                    >
+                                        {room.roomStatus === "EMPTY" ? "0/2" : (room.roomStatus === "JOINABLE" ? "1/2" : "2/2")}
+                                    </Tag>
+                                }
+                                bordered={false}
+                                styles={{
+                                    header: { backgroundColor: 'rgba(44, 44, 84, 0.95)', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+                                    body: { backgroundColor: 'rgba(64, 64, 122, 0.85)' }
+                                }}
+                            >
+                                <Paragraph>{room.description}</Paragraph>
+
+                                <Button
+                                    type="primary"
+                                    disabled={room.roomStatus === "FULL"}
+                                    onClick={() => handleJoinRoom(room.id)}
+                                >
+                                    {room.roomStatus === "FULL" ? "Room Full" : "Join Room"}
+                                </Button>
+                            </Card>
+                            </ConfigProvider>
+                        ))
+                    ) : (
+                        <Paragraph>Loading rooms or no rooms available...</Paragraph>
+                    )}
                 </div>
             </div>
 
 
-            <div className={styles.userOverview}>
+             <div className={styles.userOverview}>
                 <Title level={2} className={styles.userTitle}>Browse Users</Title>
                 <Paragraph className={styles.userSubtitle}>
                     ... user registered • Click to view profile and start a call
