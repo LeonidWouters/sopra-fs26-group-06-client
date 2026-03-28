@@ -69,7 +69,7 @@ const HomePage: React.FC = () => {
 
     const handleJoinRoom = async (roomId: number) => {
         try {
-            await apiService.post(`/rooms/${roomId}/join`, null);
+            await apiService.put(`/rooms/${roomId}/join`, null,token);
 
             message.success("Successfully joined Room!");
 
