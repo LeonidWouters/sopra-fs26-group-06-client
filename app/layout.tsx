@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Student 24-709-768",
-  description: "sopra-fs26-template-client",
+  title: "CommunicALL",
+  description: "CommunicALL",
 };
 
 export default function RootLayout({
