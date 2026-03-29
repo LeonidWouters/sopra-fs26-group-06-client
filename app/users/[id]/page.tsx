@@ -1,16 +1,20 @@
 "use client";
-import {Avatar, Badge, Button, ConfigProvider, Divider, Form, Input, message, Radio} from "antd";
+import {Avatar, Button, Form, Input, Radio, message} from "antd";
 import React, {useEffect, useState} from "react";
 import {useParams, useRouter} from "next/navigation";
 import {useApi} from "@/hooks/useApi";
 import {User} from "@/types/user";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import {useAuth} from "@/hooks/useAuth";
-import styles from "@/styles/page.module.css";
+import mainStyles from "@/styles/mainpage.module.css";
+import profileStyles from "@/styles/profile.module.css";
+import {LogoutOutlined} from "@ant-design/icons";
+import Image from "next/image";
 
 
 interface FormFieldProps {
     password: string;
+    confirmPassword: string;
 }
 
 const Profile: React.FC = () => {
@@ -23,10 +27,31 @@ const Profile: React.FC = () => {
     const {value: loggedInId, clear: clearId} = useLocalStorage<string>("id", "");
     const {clear: clearToken,} = useLocalStorage<string>("token", "");
     const isOwnProfile = String(loggedInId) === String(id);
-    const [isEditing, setIsEditing] = useState<boolean>(false);
     const [editUsername, setEditUsername] = useState<string>("");
     const [editBio, setEditBio] = useState<string>("");
     const [editDisability, setEditDisability] = useState<"HEARING" | "DEAF">("HEARING");
+
+
+    useEffect(() => {
+        if (!isReady) return;
+        if (!token) {
+            router.push("/");
+            return;
+        }
+
+        const fetchUser = async () => {
+            try {
+                const user: User = await apiService.get<User>(`/users/${id}`, token);
+                setUser(user);
+                setEditUsername(user.username ?? "");
+                setEditBio(user.bio ?? "");
+                setEditDisability(user.disabilityStatus ?? "HEARING");
+            } catch (error) {
+                messageApi.open({type: "error", content: "Could not load user."});
+            }
+        };
+        fetchUser();
+    }, [apiService, isReady, token, id, router]);
 
 
     const handleLogout = (): void => {
@@ -37,22 +62,18 @@ const Profile: React.FC = () => {
     };
 
     const changePassword = async (values: FormFieldProps) => {
+        if (values.password !== values.confirmPassword) {
+            messageApi.open({type: "error", content: "Passwords do not match."});
+            return;
+        }
         try {
-            await apiService.put<User>(
-                `/users/${id}/password`,
-                values,
-                token,
-            );
+            await apiService.put<User>(`/users/${id}/password`, {password: values.password}, token);
             await apiService.put("/users/logout", null, token);
             clearToken();
-            clearId()
+            clearId();
             router.push("/");
         } catch (error) {
-
-            messageApi.open({
-                type: "error",
-                content: `password could not be changed because of ${error}`,
-            });
+            messageApi.open({type: "error", content: "Could not change password."});
         }
     };
     const handleSaveProfile = async () => {
@@ -64,154 +85,100 @@ const Profile: React.FC = () => {
             }, token);
             const updatedUserData = await apiService.get<User>(`/users/${id}`, token);
             setUser(updatedUserData);
-            setIsEditing(false);
             messageApi.open({type: "success", content: "Profile updated!"});
         } catch (error) {
-            messageApi.open({type: "error", content: `Could not save: ${error}`});
+            messageApi.open({type: "error", content: "Could not save"});
         }
     };
 
-    const handleCancelEdit = () => {
-        setEditUsername(user?.username ?? "");
-        setEditBio(user?.bio ?? "");
-        setEditDisability(user?.disabilityStatus ?? "HEARING");
-        setIsEditing(false);
-    };
-
-
-    useEffect(() => {
-        if (!isReady) return;
-
-        const fetchUser = async () => {
-            if (!token) {
-                router.push("/");
-                return;
-            }
-
-            try {
-                if (!isReady) return;
-                const user: User = await apiService.get<User>(`/users/${id}`, token);
-                setUser(user);
-                setEditUsername(user.username ?? "");
-                setEditBio(user.bio ?? "");
-                setEditDisability(user.disabilityStatus ?? "HEARING")
-            } catch (error) {
-                if (error instanceof Error) {
-                    alert(
-                        `Something went wrong while fetching the user:\n${error.message}`,
-                    );
-                } else {
-                    console.error("An unknown error occurred while fetching the user.");
-                }
-            }
-        };
-        fetchUser();
-    }, [apiService, isReady, token, router]);
+    if (!user) return <div>Loading...</div>;
 
     return (
-        <div className="profile-container">
+        <div className={mainStyles.container}>
             {contextHolder}
-            <div className="auth-card form-transition">
-
-                <div style={{display: "flex", alignItems: "center", gap: 16, marginBottom: 24}}>
-                    <Avatar size={56} style={{backgroundColor: "#22426b", fontSize: 18, flexShrink: 0}}>
-                        {user?.username?.slice(0, 2).toUpperCase() ?? "?"}
-                    </Avatar>
-                    <div>
-                        <div style={{fontSize: 20, fontWeight: 600, color: "#171717"}}>{user?.username}</div>
-                        <Badge
-                            status={user?.status === "ONLINE" ? "success" : "default"}
-                            text={user?.status === "ONLINE" ? "Online" : "Offline"}
-                        />
+            <div className={mainStyles.navbar}>
+                <div className={mainStyles.logoWrapper}>
+                    <Image
+                        src="/unnamed-Photoroom.png"
+                        alt="CommunicALL"
+                        width={200}
+                        height={55}
+                        style={{width: "auto", maxWidth: "200px", height: "100%", maxHeight: "55px"}}
+                    />
+                </div>
+                <div className={mainStyles.navButtons}>
+                    <Button color="default" variant="text"
+                            onClick={() => router.push(`/mainpage`)}>
+                        ← Back
+                    </Button>
+                    <Button color="danger" variant="text" icon={<LogoutOutlined/>}
+                            onClick={handleLogout}>
+                        Sign Out
+                    </Button>
+                </div>
+            </div>
+            <div className={mainStyles.mainContent}>
+                <div className={profileStyles.card}>
+                    <div style={{display: "flex", alignItems: "center", gap: 24}}>
+                        <Avatar size={88} className={profileStyles.avatar}>
+                            {user.username ? user.username.slice(0, 2).toUpperCase() : "?"}
+                        </Avatar>
+                        <div>
+                            <div style={{fontSize: 30, fontWeight: 600}}>{user.username}</div>
+                            <span style={{
+                                background: user.status === "ONLINE" ? "#00c950" : "#8a8a8a",
+                                color: "white",
+                                borderRadius: 8,
+                                padding: "2px 10px",
+                                fontSize: 12
+                            }}>
+                                {user.status === "ONLINE" ? "Online" : "Offline"}
+                            </span>
+                            <div style={{color: "#4a5565", marginTop: 8}}>{user.bio}</div>
+                        </div>
                     </div>
                 </div>
 
-                <Divider/>
-
-                {!isEditing ? (
-                    <>
-                        <div className="profile-section" style={{marginBottom: 12}}>
-                            <div className="profile-section-label">Bio</div>
-                            <div className="profile-section-value">{user?.bio || "—"}</div>
-                        </div>
-                        <div className="profile-section" style={{marginBottom: 12}}>
-                            <div className="profile-section-label">Accessibility</div>
-                            <div className="profile-section-value">
-                                {user?.disabilityStatus === "DEAF" ? "Deaf" : "Hearing"}
-                            </div>
-                        </div>
-                        <div className="profile-section" style={{marginBottom: 24}}>
-                            <div className="profile-section-label">Member Since</div>
-                            <div className="profile-section-value">
-                                {user?.creationDate
-                                    ? new Date(user.creationDate).toLocaleDateString("en-US", {
-                                        year: "numeric",
-                                        month: "long",
-                                        day: "numeric"
-                                    })
-                                    : "—"}
-                            </div>
-                        </div>
-
-                        {isOwnProfile && (
-                            <Button type="primary" onClick={() => setIsEditing(true)} className="login-button">
-                                Edit Profile
-                            </Button>
-                        )}
-                    </>
-                ) : (
-                    <>
-                        <ConfigProvider theme={{
-                            components: {
-                                Input: {colorBgContainer: "#ffffff", colorText: "#171717", colorBorder: "#d9d9d9"},
-                            }
-                        }}>
-                            <Form layout="vertical" size="large" variant="outlined">
-                                <Form.Item label="Username" className={styles.loginMask} style={{marginBottom: "12px"}}>
-                                    <Input value={editUsername} onChange={e => setEditUsername(e.target.value)}/>
-                                </Form.Item>
-                                <Form.Item label="Bio" className={styles.loginMask} style={{marginBottom: "12px"}}>
-                                    <Input.TextArea
-                                        rows={3}
-                                        value={editBio}
-                                        onChange={e => setEditBio(e.target.value)}
-                                        placeholder="Tell us about yourself..."
-                                    />
-                                </Form.Item>
-                                <Form.Item label="Accessibility Status" className={styles.loginMask} style={{marginBottom: "12px"}}>
-                                    <Radio.Group
-                                        value={editDisability}
-                                        onChange={e => setEditDisability(e.target.value as "HEARING" | "DEAF")}
-                                    >
-                                        <Radio value="HEARING">Hearing</Radio>
-                                        <Radio value="DEAF">Deaf</Radio>
-                                    </Radio.Group>
-                                </Form.Item>
-                                <Form.Item style={{marginBottom: "8px"}}>
-                                    <Button type="primary" onClick={handleSaveProfile} className="login-button">
-                                        Save Changes
-                                    </Button>
-                                </Form.Item>
-                                <Form.Item>
-                                    <Button onClick={handleCancelEdit} className="login-button">
-                                        Cancel
-                                    </Button>
-                                </Form.Item>
-                            </Form>
-                        </ConfigProvider>
-                    </>
+                {isOwnProfile && (
+                    <div className={profileStyles.card}>
+                        <div style={{fontSize: 24, fontWeight: 600, color: "#101828"}}>Edit Profile</div>
+                        <div style={{color: "#4a5565", marginTop: 4, marginBottom: 24}}>Change your username, bio or accessibility status</div>
+                        <Form layout="vertical" onFinish={handleSaveProfile}>
+                            <Form.Item label="Username">
+                                <Input value={editUsername} onChange={e => setEditUsername(e.target.value)}/>
+                            </Form.Item>
+                            <Form.Item label="Bio">
+                                <Input.TextArea rows={3} value={editBio} onChange={e => setEditBio(e.target.value)}
+                                                placeholder="Tell us about yourself..."/>
+                            </Form.Item>
+                            <Form.Item label="Accessibility Status">
+                                <Radio.Group value={editDisability} onChange={e => setEditDisability(e.target.value)}>
+                                    <Radio value="HEARING">Hearing</Radio>
+                                    <Radio value="DEAF">Deaf</Radio>
+                                </Radio.Group>
+                            </Form.Item>
+                            <Button type="primary" htmlType="submit">Save Changes</Button>
+                        </Form>
+                    </div>
                 )}
 
-                <Divider/>
-
-                <div style={{display: "flex", gap: 12}}>
-                    <Button onClick={() => router.push("/users")} size="large" style={{flex: 1}}>
-                        Back
-                    </Button>
-                    <Button danger onClick={handleLogout} size="large" style={{flex: 1}}>
-                        Logout
-                    </Button>
-                </div>
+                {isOwnProfile && (
+                    <div className={profileStyles.card}>
+                        <div style={{fontSize: 24, fontWeight: 600, color: "#101828"}}>Change Password</div>
+                        <div style={{color: "#4a5565", marginTop: 4, marginBottom: 24}}>You will be logged out after changing your password</div>
+                        <Form layout="vertical" onFinish={changePassword}>
+                            <Form.Item label="New Password" name="password"
+                                       rules={[{required: true, message: "Please enter a new password"}]}>
+                                <Input.Password placeholder="Enter new password"/>
+                            </Form.Item>
+                            <Form.Item label="Confirm Password" name="confirmPassword"
+                                       rules={[{required: true, message: "Please confirm your password"}]}>
+                                <Input.Password placeholder="Confirm new password"/>
+                            </Form.Item>
+                            <Button type="primary" htmlType="submit">Update Password</Button>
+                        </Form>
+                    </div>
+                )}
 
             </div>
         </div>

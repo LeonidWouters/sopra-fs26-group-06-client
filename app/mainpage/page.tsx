@@ -166,7 +166,7 @@ const HomePage: React.FC = () => {
                                 }
                                 bordered={false}
                                 styles={{
-                                    header: { backgroundColor: 'rgba(44, 44, 84, 0.95)', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+                                    header: { backgroundColor: 'rgba(44, 44, 84, 0.95)', borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#ffffff' },
                                     body: { backgroundColor: 'rgba(64, 64, 122, 0.85)' }
                                 }}
                             >
