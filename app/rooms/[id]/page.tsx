@@ -43,13 +43,11 @@ const RoomPage: React.FC = () => {
     return (
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", color: "blueviolet"}} >
             <div>
-            <video ref ={videoRef} autoPlay={true} muted />
+            <video ref ={videoRef} autoPlay muted />
             </div>
             <div>
                 <Button onClick={leaveRoom} type="primary">Leave Video Call</Button>
             </div>
-
-
         </div>
     );
 };
