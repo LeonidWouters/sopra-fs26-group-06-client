@@ -1,9 +1,9 @@
 import { getApiDomain } from "@/utils/domain";
 import { ApplicationError } from "@/types/error";
 
-export class ApiService {
+class ApiService {
   private baseURL: string;
-  private defaultHeaders: HeadersInit;
+  private defaultHeaders: Record<string, string>;
 
   constructor() {
     this.baseURL = getApiDomain();
@@ -50,6 +50,10 @@ export class ApiService {
       error.status = res.status;
       throw error;
     }
+
+    else if (res.status === 204) {
+      return Promise.resolve(res as T)
+    }
     return res.headers.get("Content-Type")?.includes("application/json")
       ? (res.json() as Promise<T>)
       : Promise.resolve(res as T);
@@ -60,8 +64,9 @@ export class ApiService {
    * @param endpoint - The API endpoint (e.g. "/users").
    * @returns JSON data of type T.
    */
-  public async get<T>(endpoint: string): Promise<T> {
+  public async get<T>(endpoint: string, token: string): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
+    this.defaultHeaders["token"] = token;
     const res = await fetch(url, {
       method: "GET",
       headers: this.defaultHeaders,
@@ -97,13 +102,19 @@ export class ApiService {
    * @param data - The payload to update.
    * @returns JSON data of type T.
    */
-  public async put<T>(endpoint: string, data: unknown): Promise<T> {
+  public async put<T>(
+    endpoint: string,
+    data: unknown,
+    token: string,
+  ): Promise<T> {
+    this.defaultHeaders["token"] = token;
     const url = `${this.baseURL}${endpoint}`;
     const res = await fetch(url, {
       method: "PUT",
       headers: this.defaultHeaders,
       body: JSON.stringify(data),
     });
+    console.log(res)
     return this.processResponse<T>(
       res,
       "An error occurred while updating the data.\n",
@@ -127,3 +138,5 @@ export class ApiService {
     );
   }
 }
+
+export default ApiService;

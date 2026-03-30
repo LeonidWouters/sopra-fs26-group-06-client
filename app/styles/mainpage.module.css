@@ -1,0 +1,142 @@
+.container {
+    padding: 24px;
+    background: #f0f2f5;
+    min-height: 100vh;
+}
+
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 16px 24px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.logoWrapper {
+    display: flex;
+    align-items: center;
+}
+
+.navButtons {
+    display: flex;
+    gap: 12px;
+}
+
+.navButton {
+    border-radius: 8px;
+}
+
+
+.mainContent {
+    margin-top: 32px;
+}
+
+.title {
+    font-size: 24px;
+    margin-bottom: 16px;
+    color: #000 !important;
+}
+
+.subtitle {
+    font-size: 16px;
+    color: #000 !important;
+    margin-bottom: 32px;
+}
+
+.cardContainer {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.card {
+    background-color: rgba(0, 65, 229, 0.08) !important;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(212, 11, 11, 0.1);
+}
+
+
+.userOverview {
+    margin-top: 48px;
+    padding: 24px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.userTitle {
+    font-size: 24px;
+    margin-bottom: 16px;
+    color: #000 !important;
+}
+
+.userSubtitle {
+    font-size: 16px;
+    color: #000 !important;
+    margin-bottom: 24px;
+}
+
+.userCard {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.userAvatar {
+    flex-shrink: 0;
+}
+
+.avatarCircle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #dbeafe, #f3e8ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #dbeafe;
+}
+
+.avatarInitials {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1447e6;
+}
+
+.userInfo {
+    flex: 1;
+}
+
+.userName {
+    margin: 0;
+    font-size: 18px;
+    color: #000 !important; /* Textfarbe auf Schwarz geändert */
+}
+
+.userBio {
+    margin: 4px 0;
+    color: #4a5565 !important;
+}
+
+.userStatus {
+    margin-top: 8px;
+    color: black !important;
+}
+
+.statusBadge {
+    display: inline-block;
+    padding: 4px 8px;
+    background: rgba(45, 241, 23, 0.32);
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #030213 !important;}
+
+.userGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+}

@@ -1,23 +1,188 @@
-// your code here for S2 to display a single user profile after having clicked on it
-// each user has their own slug /[id] (/1, /2, /3, ...) and is displayed using this file
-// try to leverage the component library from antd by utilizing "Card" to display the individual user
-// import { Card } from "antd"; // similar to /app/users/page.tsx
-
 "use client";
-// For components that need React hooks and browser APIs,
-// SSR (server side rendering) has to be disabled.
-// Read more here: https://nextjs.org/docs/pages/building-your-application/rendering/server-side-rendering
+import {Avatar, Button, Form, Input, Radio, message} from "antd";
+import React, {useEffect, useState} from "react";
+import {useParams, useRouter} from "next/navigation";
+import {useApi} from "@/hooks/useApi";
+import {User} from "@/types/user";
+import useLocalStorage from "@/hooks/useLocalStorage";
+import {useAuth} from "@/hooks/useAuth";
+import mainStyles from "@/styles/mainpage.module.css";
+import profileStyles from "@/styles/profile.module.css";
+import {LogoutOutlined} from "@ant-design/icons";
+import Image from "next/image";
 
-import React from "react";
+
+interface FormFieldProps {
+    password: string;
+    confirmPassword: string;
+}
 
 const Profile: React.FC = () => {
-  return (
-    <div className="card-container">
-      <p>
-        <strong>SampleUser</strong>
-      </p>
-    </div>
-  );
+    const router = useRouter();
+    const apiService = useApi();
+    const [user, setUser] = useState<User | null>(null);
+    const {id} = useParams();
+    const {token, isReady} = useAuth();
+    const [messageApi, contextHolder] = message.useMessage();
+    const {value: loggedInId, clear: clearId} = useLocalStorage<string>("id", "");
+    const {clear: clearToken,} = useLocalStorage<string>("token", "");
+    const isOwnProfile = String(loggedInId) === String(id);
+    const [editUsername, setEditUsername] = useState<string>("");
+    const [editBio, setEditBio] = useState<string>("");
+    const [editDisability, setEditDisability] = useState<"HEARING" | "DEAF">("HEARING");
+
+
+    useEffect(() => {
+        if (!isReady) return;
+        if (!token) {
+            router.push("/");
+            return;
+        }
+
+        const fetchUser = async () => {
+            try {
+                const user: User = await apiService.get<User>(`/users/${id}`, token);
+                setUser(user);
+                setEditUsername(user.username ?? "");
+                setEditBio(user.bio ?? "");
+                setEditDisability(user.disabilityStatus ?? "HEARING");
+            } catch (error) {
+                messageApi.open({type: "error", content: "Could not load user."});
+            }
+        };
+        fetchUser();
+    }, [apiService, isReady, token, id, router]);
+
+
+    const handleLogout = (): void => {
+        apiService.put("/users/logout", null, token);
+        clearToken();
+        clearId();
+        router.push("/");
+    };
+
+    const changePassword = async (values: FormFieldProps) => {
+        if (values.password !== values.confirmPassword) {
+            messageApi.open({type: "error", content: "Passwords do not match."});
+            return;
+        }
+        try {
+            await apiService.put<User>(`/users/${id}/password`, {password: values.password}, token);
+            await apiService.put("/users/logout", null, token);
+            clearToken();
+            clearId();
+            router.push("/");
+        } catch (error) {
+            messageApi.open({type: "error", content: "Could not change password."});
+        }
+    };
+    const handleSaveProfile = async () => {
+        try {
+            await apiService.put(`/users/${id}/profile`, {
+                username: editUsername,
+                bio: editBio,
+                disabilityStatus: editDisability,
+            }, token);
+            const updatedUserData = await apiService.get<User>(`/users/${id}`, token);
+            setUser(updatedUserData);
+            messageApi.open({type: "success", content: "Profile updated!"});
+        } catch (error) {
+            messageApi.open({type: "error", content: "Could not save"});
+        }
+    };
+
+    if (!user) return <div>Loading...</div>;
+
+    return (
+        <div className={mainStyles.container}>
+            {contextHolder}
+            <div className={mainStyles.navbar}>
+                <div className={mainStyles.logoWrapper}>
+                    <Image
+                        src="/unnamed-Photoroom.png"
+                        alt="CommunicALL"
+                        width={200}
+                        height={55}
+                        style={{width: "auto", maxWidth: "200px", height: "100%", maxHeight: "55px"}}
+                    />
+                </div>
+                <div className={mainStyles.navButtons}>
+                    <Button color="default" variant="text"
+                            onClick={() => router.push(`/mainpage`)}>
+                        ← Back
+                    </Button>
+                    <Button color="danger" variant="text" icon={<LogoutOutlined/>}
+                            onClick={handleLogout}>
+                        Sign Out
+                    </Button>
+                </div>
+            </div>
+            <div className={mainStyles.mainContent}>
+                <div className={profileStyles.card}>
+                    <div style={{display: "flex", alignItems: "center", gap: 24}}>
+                        <Avatar size={88} className={profileStyles.avatar}>
+                            {user.username ? user.username.slice(0, 2).toUpperCase() : "?"}
+                        </Avatar>
+                        <div>
+                            <div style={{fontSize: 30, fontWeight: 600}}>{user.username}</div>
+                            <span style={{
+                                background: user.status === "ONLINE" ? "#00c950" : "#8a8a8a",
+                                color: "white",
+                                borderRadius: 8,
+                                padding: "2px 10px",
+                                fontSize: 12
+                            }}>
+                                {user.status === "ONLINE" ? "Online" : "Offline"}
+                            </span>
+                            <div style={{color: "#4a5565", marginTop: 8}}>{user.bio}</div>
+                        </div>
+                    </div>
+                </div>
+
+                {isOwnProfile && (
+                    <div className={profileStyles.card}>
+                        <div style={{fontSize: 24, fontWeight: 600, color: "#101828"}}>Edit Profile</div>
+                        <div style={{color: "#4a5565", marginTop: 4, marginBottom: 24}}>Change your username, bio or accessibility status</div>
+                        <Form layout="vertical" onFinish={handleSaveProfile}>
+                            <Form.Item label="Username">
+                                <Input value={editUsername} onChange={e => setEditUsername(e.target.value)}/>
+                            </Form.Item>
+                            <Form.Item label="Bio">
+                                <Input.TextArea rows={3} value={editBio} onChange={e => setEditBio(e.target.value)}
+                                                placeholder="Tell us about yourself..."/>
+                            </Form.Item>
+                            <Form.Item label="Accessibility Status">
+                                <Radio.Group value={editDisability} onChange={e => setEditDisability(e.target.value)}>
+                                    <Radio value="HEARING">Hearing</Radio>
+                                    <Radio value="DEAF">Deaf</Radio>
+                                </Radio.Group>
+                            </Form.Item>
+                            <Button type="primary" htmlType="submit">Save Changes</Button>
+                        </Form>
+                    </div>
+                )}
+
+                {isOwnProfile && (
+                    <div className={profileStyles.card}>
+                        <div style={{fontSize: 24, fontWeight: 600, color: "#101828"}}>Change Password</div>
+                        <div style={{color: "#4a5565", marginTop: 4, marginBottom: 24}}>You will be logged out after changing your password</div>
+                        <Form layout="vertical" onFinish={changePassword}>
+                            <Form.Item label="New Password" name="password"
+                                       rules={[{required: true, message: "Please enter a new password"}]}>
+                                <Input.Password placeholder="Enter new password"/>
+                            </Form.Item>
+                            <Form.Item label="Confirm Password" name="confirmPassword"
+                                       rules={[{required: true, message: "Please confirm your password"}]}>
+                                <Input.Password placeholder="Confirm new password"/>
+                            </Form.Item>
+                            <Button type="primary" htmlType="submit">Update Password</Button>
+                        </Form>
+                    </div>
+                )}
+
+            </div>
+        </div>
+    );
 };
 
 export default Profile;
