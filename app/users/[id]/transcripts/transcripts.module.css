@@ -1,0 +1,99 @@
+.pageTitle {
+    font-size: 28px;
+    font-weight: 700;
+    color: #101828;
+    margin-bottom: 32px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.card {
+    position: relative;
+    background: #fff;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
+    border-top: 4px solid transparent;
+    background-clip: padding-box;
+    overflow: visible;
+}
+
+.card::before {
+    content: "";
+    position: absolute;
+    top: -4px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #4f46e5, #7c3aed);
+    border-radius: 14px 14px 0 0;
+}
+
+.deleteBtn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #f87171;
+    font-size: 18px;
+    padding: 0;
+    line-height: 1;
+}
+
+.deleteBtn:hover {
+    color: #dc2626;
+}
+
+.cardHeader {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.iconWrapper {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #dbeafe, #f3e8ff);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cardTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: #101828;
+}
+
+.cardMeta {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+.participants {
+    font-size: 13px;
+    color: #4a5565;
+}
+
+@media (max-width: 900px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
