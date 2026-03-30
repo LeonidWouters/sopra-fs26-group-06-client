@@ -46,7 +46,7 @@ const Login: React.FC = () => {
                 setId(String(response.id));
             }
             // Navigate to the user overview
-            router.push(`/mainpage/${response.id}`);
+            router.push(`/mainpage`);
         } catch (error) {
             if (error instanceof Error && error.message.includes("The password provided is not correct!")) {
                 Modal.error({
@@ -121,8 +121,8 @@ const Login: React.FC = () => {
                         maxHeight: "140px",
                         display: "block",
                         margin: "0 auto",
-                        transform: authMode === "login" ? "scale(1.6)" : "scale(0.8)",
-                        marginBottom: authMode === "login" ? "40px" : "20px"
+                        transform: authMode === "login" ? "scale(1.4)" : "scale(0.8)",
+                        marginBottom: authMode === "login" ? "25px" : "20px"
                     }}
 
                 />
@@ -133,8 +133,8 @@ const Login: React.FC = () => {
                                 Segmented: {
                                     itemColor: '#888888',
                                     itemSelectedColor: '#ffffff',
-                                    itemSelectedBg: '#383838',
-                                    trackBg: '#1a1a1a',
+                                    itemSelectedBg: '#6B21D6',
+                                    trackBg: '#f0f0f0',
                                 },
                                 Select: {
                                     colorBorder: "gray",
@@ -142,6 +142,7 @@ const Login: React.FC = () => {
                                     colorIcon: "#888888",
                                     colorTextQuaternary: "#888888",
                                     colorBgElevated: "#16181D",
+                                    colorText: "#ffffff",
                                     controlItemBgHover: "#22426b",
                                     controlItemBgActive: "#22426b",
                                 },
