@@ -80,7 +80,7 @@ const Login: React.FC = () => {
             if (response.id) {
                 setId(String(response.id));
             }
-            router.push(`/mainpage/${response.id}`);
+            router.push(`/mainpage/`);
         } catch (error) {
             if (
                 error instanceof Error &&
@@ -133,17 +133,18 @@ const Login: React.FC = () => {
                                 Segmented: {
                                     itemColor: '#888888',
                                     itemSelectedColor: '#ffffff',
-                                    itemSelectedBg: '#383838',
-                                    trackBg: '#1a1a1a',
+                                    itemSelectedBg: '#6B21D6',
+                                    trackBg: '#f0f0f0',
                                 },
                                 Select: {
                                     colorBorder: "gray",
                                     colorTextPlaceholder: "#888888",
                                     colorIcon: "#888888",
-                                    colorTextQuaternary: "#888888",
-                                    colorBgElevated: "#16181D",
-                                    controlItemBgHover: "#22426b",
-                                    controlItemBgActive: "#22426b",
+                                    colorBgContainer: "#ffffff",
+                                    colorBgElevated: "#ffffff",
+                                    colorText: "#000000",
+                                    controlItemBgHover: "#f0f0f0",
+                                    controlItemBgActive: "#e6f4ff",
                                 },
                             },
                         }}

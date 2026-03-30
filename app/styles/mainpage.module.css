@@ -112,7 +112,7 @@
 .userName {
     margin: 0;
     font-size: 18px;
-    color: #000 !important;/* Textfarbe auf Schwarz geändert */
+    color: #000 !important; /* Textfarbe auf Schwarz geändert */
 }
 
 .userBio {
@@ -133,3 +133,10 @@
     font-size: 12px;
     font-weight: 500;
     color: #030213 !important;}
+
+.userGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+}
