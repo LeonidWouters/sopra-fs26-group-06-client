@@ -80,7 +80,7 @@ const Login: React.FC = () => {
             if (response.id) {
                 setId(String(response.id));
             }
-            router.push(`/mainpage/${response.id}`);
+            router.push(`/mainpage/`);
         } catch (error) {
             if (
                 error instanceof Error &&

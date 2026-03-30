@@ -133,3 +133,10 @@
     font-size: 12px;
     font-weight: 500;
     color: #030213 !important;}
+
+.userGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 Spalten mit gleicher Breite */
+    gap: 16px; /* Abstand zwischen den Karten */
+    margin-top: 16px;
+}
