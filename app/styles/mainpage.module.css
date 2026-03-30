@@ -136,7 +136,7 @@
 
 .userGrid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 4 Spalten mit gleicher Breite */
-    gap: 16px; /* Abstand zwischen den Karten */
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
     margin-top: 16px;
 }
