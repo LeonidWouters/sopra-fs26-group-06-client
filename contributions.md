@@ -59,14 +59,8 @@ reason).
 |                    | [date]   | [Link to Commit 2] | [Brief description of the task]                                                                                                                       | [Why this contribution is relevant]                                                                                                   |
 | **[@githubUser4]** | [date]   | [Link to Commit 1] | [Brief description of the task]                                                                                                                       | [Why this contribution is relevant]                                                                                                   |
 |                    | [date]   | [Link to Commit 2] | [Brief description of the task]                                                                                                                       | [Why this contribution is relevant]                                                                                                   |
-
-| **[@laurin10]** | [30.3.2026]   | [https://github.com/LeonidWouters/sopra-fs26-group-06-client/pull/27] 
-| Added a "See latest transcripts/notes" button to the user profile page that navigates to a new transcripts page, where users can view and download their past video call transcripts and notes. 
-
-| It allows users to access and review their past call transcripts and notes directly from their profil. |
-
-
-|                    | [date]   | [Link to Commit 2] | [Brief description of the task] | [Why this contribution is relevant] |
+| **@laurin10**      | 30.03.2026 | https://github.com/LeonidWouters/sopra-fs26-group-06-client/pull/27 | Added a "See latest transcripts/notes" button to the user profile page that navigates to a new transcripts page, where users can view and download their past video call transcripts and notes. | It allows users to access and review their past call transcripts and notes directly from their profile, enabling asynchronous communication and follow-up after a video call has ended. |
+|                    | [date]   | [Link to Commit 2] | [Brief description of the task]                                                                                                                       | [Why this contribution is relevant]                                                                                                   |
 
 
 
