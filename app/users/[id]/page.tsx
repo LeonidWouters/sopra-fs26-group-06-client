@@ -119,23 +119,40 @@ const Profile: React.FC = () => {
             </div>
             <div className={mainStyles.mainContent}>
                 <div className={profileStyles.card}>
-                    <div style={{display: "flex", alignItems: "center", gap: 24}}>
-                        <Avatar size={88} className={profileStyles.avatar}>
-                            {user.username ? user.username.slice(0, 2).toUpperCase() : "?"}
-                        </Avatar>
-                        <div>
-                            <div style={{fontSize: 30, fontWeight: 600}}>{user.username}</div>
-                            <span style={{
-                                background: user.status === "ONLINE" ? "#00c950" : "#8a8a8a",
-                                color: "white",
-                                borderRadius: 8,
-                                padding: "2px 10px",
-                                fontSize: 12
-                            }}>
-                                {user.status === "ONLINE" ? "Online" : "Offline"}
-                            </span>
-                            <div style={{color: "#4a5565", marginTop: 8}}>{user.bio}</div>
+                    <div style={{display: "flex", alignItems: "center", justifyContent: "space-between"}}>
+                        <div style={{display: "flex", alignItems: "center", gap: 24}}>
+                            <Avatar size={88} className={profileStyles.avatar}>
+                                {user.username ? user.username.slice(0, 2).toUpperCase() : "?"}
+                            </Avatar>
+                            <div>
+                                <div style={{fontSize: 30, fontWeight: 600}}>{user.username}</div>
+                                <span style={{
+                                    background: user.status === "ONLINE" ? "#00c950" : "#8a8a8a",
+                                    color: "white",
+                                    borderRadius: 8,
+                                    padding: "2px 10px",
+                                    fontSize: 12
+                                }}>
+                                    {user.status === "ONLINE" ? "Online" : "Offline"}
+                                </span>
+                                <div style={{color: "#4a5565", marginTop: 8}}>{user.bio}</div>
+                            </div>
                         </div>
+                        <Button
+                            type="primary"
+                            onClick={() => router.push(`/users/${id}/transcripts`)}
+                            style={{
+                                background: "linear-gradient(90deg, #4f46e5, #7c3aed)",
+                                border: "none",
+                                borderRadius: 10,
+                                height: 44,
+                                padding: "0 24px",
+                                fontSize: 15,
+                                fontWeight: 500,
+                            }}
+                        >
+                            See latest transcripts/notes
+                        </Button>
                     </div>
                 </div>
 
