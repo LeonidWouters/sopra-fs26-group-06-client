@@ -12,6 +12,7 @@
   "dependencies": {
     "@ant-design/nextjs-registry": "^1.0.2",
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@uiw/react-md-editor": "^4.1.0",
     "antd": "^6.0.0",
     "antd-password-input-strength": "^2.0.1",
     "next": "^15.5.7",
