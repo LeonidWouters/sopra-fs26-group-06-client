@@ -47,8 +47,9 @@ reason).
 
 ---
 
-## Contributions Week 2 - [Begin Date] to [End Date]
+## Contributions Week 2 - [30.03.2026] to [06.04.2026]
 
+<<<<<<< Updated upstream
 | **Student**        | **Date** | **Link to Commit** | **Description**                                                                                                                                       | **Relevance**                                                                                                                         |
 |--------------------|----------|--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
 | **@tcaselas**      | 30.03.26 | https://github.com/LeonidWouters/sopra-fs26-group-06-client/pull/22 | Implemented User Overview of all Users that are currently online on the Mainpage. Also feature to search for a user in a list of all registered users | This is important so that a user is able to see whos online so that he knows who he can call. Also to check out a other users profile |
@@ -63,6 +64,18 @@ reason).
 |                    | [date]   | [Link to Commit 2] | [Brief description of the task]                                                                                                                       | [Why this contribution is relevant]                                                                                                   |
 
 
+=======
+| **Student**        | **Date** | **Link to Commit** | **Description**                 | **Relevance**                       |
+|--------------------|----------|--------------------|---------------------------------|-------------------------------------|
+| **@LeonidWouters** | 01.04.2026   | https://github.com/LeonidWouters/sopra-fs26-group-06-server/pull/39 | Added the wiring for fetching all transcripts or notes for a specific user | Frontend needs this in order to be able to show all documents for a user |
+|                    | [date]   | [Link to Commit 2] | [Brief description of the task] | [Why this contribution is relevant] |
+| **[@githubUser2]** | [date]   | [Link to Commit 1] | [Brief description of the task] | [Why this contribution is relevant] |
+|                    | [date]   | [Link to Commit 2] | [Brief description of the task] | [Why this contribution is relevant] |
+| **[@githubUser3]** | [date]   | [Link to Commit 1] | [Brief description of the task] | [Why this contribution is relevant] |
+|                    | [date]   | [Link to Commit 2] | [Brief description of the task] | [Why this contribution is relevant] |
+| **[@githubUser4]** | [date]   | [Link to Commit 1] | [Brief description of the task] | [Why this contribution is relevant] |
+|                    | [date]   | [Link to Commit 2] | [Brief description of the task] | [Why this contribution is relevant] |
+>>>>>>> Stashed changes
 
 ---
 
