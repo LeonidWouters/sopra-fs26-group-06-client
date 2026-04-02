@@ -16,8 +16,6 @@ const RoomPage: React.FC = () => {
     const { token, isReady } = useAuth();
     const { id } = useParams();
     const clientRef = useRef<HTMLVideoElement>(null);
-    const remoteRef = useRef<HTMLVideoElement>(null);
-    const peerConnection = useRef<RTCPeerConnection | null>(null);
     const wsRef = useRef<WebSocket>(null);
     const [messages, setMessages] = useState<unknown[]>([]);
 
@@ -31,31 +29,13 @@ const RoomPage: React.FC = () => {
         router.push("/mainpage");
     };
 
-    const createOffer= async() => {
-        try {
-            peerConnection.current = new RTCPeerConnection();
-            peerConnection.current.setConfiguration({
-                iceServers: [
-                    {urls: "stun:stun.l.google.com:19302"},
-                ]
-            })
-            peerConnection.current.onicecandidate = (event) => {
-                if (event.candidate) {
-                    console.log("New ICE candidate:", event.candidate);
-                }
-            }
-        }
-        catch (error){
-                console.error("Error creating offer", error);
-            }
-        }
     useEffect(() => {
         if (!isReady) return;
-        const socket = new WebSocket("ws://localhost:8080/ws/SocketsHandler");
+        const socket = new WebSocket(`ws://localhost:8080/ws/SocketsHandler?token=${token}`);
         wsRef.current = socket;
 
         socket.onopen = () => {
-            socket.send(JSON.stringify({token}));
+            socket.send(JSON.stringify({id}));
         }
         socket.onmessage = (event) => {
             setMessages((prev) => [...prev, event.data]);
