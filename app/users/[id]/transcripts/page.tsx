@@ -9,7 +9,7 @@ import styles from "./transcripts.module.css";
 import { useApi } from "@/hooks/useApi";
 import { useAuth } from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
-import { TranscriptOrNote } from "@/types/transcript";
+import { DocumentItem, UserDocumentsGetDTO } from "@/types/transcript";
 
 const TranscriptsPage: React.FC = () => {
     const router = useRouter();
@@ -19,7 +19,7 @@ const TranscriptsPage: React.FC = () => {
     const { clear: clearToken } = useLocalStorage<string>("token", "");
     const { clear: clearId } = useLocalStorage<string>("id", "");
 
-    const [items, setItems] = useState<TranscriptOrNote[]>([]);
+    const [items, setItems] = useState<DocumentItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -28,9 +28,22 @@ const TranscriptsPage: React.FC = () => {
             router.push("/");
             return;
         }
-        // Data will be loaded once the backend exposes GET /users/{id}/transcripts
-        setLoading(false);
-    }, [isReady, token, router]);
+
+        const fetchDocuments = async () => {
+            try {
+                const data = await apiService.get<UserDocumentsGetDTO>(`/users/${id}/documents`, token);
+                const transcripts = (data.transcripts ?? []).map((t) => ({ ...t, kind: "transcript" as const }));
+                const notes = (data.notes ?? []).map((n) => ({ ...n, kind: "note" as const }));
+                setItems([...transcripts, ...notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+            } catch {
+                // leave items empty — empty state will show
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDocuments();
+    }, [isReady, token, id, router, apiService]);
 
     const handleLogout = (): void => {
         apiService.put("/users/logout", null, token);
@@ -39,8 +52,8 @@ const TranscriptsPage: React.FC = () => {
         router.push("/");
     };
 
-    const handleDownload = (item: TranscriptOrNote) => {
-        const filename = `${item.kind}-${item.createdAt ?? item.id}.txt`;
+    const handleDownload = (item: DocumentItem) => {
+        const filename = `${item.kind}-${item.createdAt.slice(0, 10)}-${item.id}.txt`;
         const blob = new Blob([item.content ?? ""], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -50,29 +63,21 @@ const TranscriptsPage: React.FC = () => {
         URL.revokeObjectURL(url);
     };
 
-    const handleDelete = async (item: TranscriptOrNote) => {
+    const handleDelete = async (item: DocumentItem) => {
         const endpoint = item.kind === "transcript"
             ? `/transcripts/${item.id}`
             : `/notes/${item.id}`;
         try {
             await apiService.delete(endpoint);
-            setItems((prev) => prev.filter((i) => i.id !== item.id));
+            setItems((prev) => prev.filter((i) => i.id !== item.id || i.kind !== item.kind));
         } catch {
-            // silently ignore — user stays on page
-        }
-    };
-
-    const formatDate = (iso: string) => {
-        try {
-            return iso.slice(0, 10);
-        } catch {
-            return iso;
+            // silently ignore
         }
     };
 
     const formatSize = (content: string) => {
         const bytes = new TextEncoder().encode(content).length;
-        return `${Math.round(bytes / 1024)} KB`;
+        return `${Math.max(1, Math.round(bytes / 1024))} KB`;
     };
 
     if (!isReady || loading) {
@@ -116,7 +121,7 @@ const TranscriptsPage: React.FC = () => {
                 ) : (
                     <div className={styles.grid}>
                         {items.map((item) => (
-                            <div key={item.id} className={styles.card}>
+                            <div key={`${item.kind}-${item.id}`} className={styles.card}>
                                 <button
                                     className={styles.deleteBtn}
                                     aria-label="Delete"
@@ -130,15 +135,13 @@ const TranscriptsPage: React.FC = () => {
                                     </div>
                                     <div>
                                         <div className={styles.cardTitle}>
-                                            Video Call {formatDate(item.createdAt)}
+                                            Video Call {item.createdAt.slice(0, 10)}
                                         </div>
                                         <div className={styles.cardMeta}>{formatSize(item.content)}</div>
                                     </div>
                                 </div>
                                 <div className={styles.participants}>
-                                    {item.participants?.length
-                                        ? `Participants: ${item.participants.join(", ")}`
-                                        : ""}
+                                    {item.kind === "transcript" ? "Transcript" : "Note"}
                                 </div>
                                 <Button
                                     icon={<DownloadOutlined />}

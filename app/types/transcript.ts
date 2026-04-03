@@ -1,15 +1,23 @@
-export interface Transcript {
-  id: string;
+export interface TranscriptGetDTO {
+  id: number;
   content: string;
   createdAt: string;
-  participants?: string[];
+  sessionId: string;
 }
 
-export interface Note {
-  id: string;
+export interface NoteGetDTO {
+  id: number;
   content: string;
   createdAt: string;
-  participants?: string[];
+  updatedAt: string;
+  sessionId: string;
 }
 
-export type TranscriptOrNote = (Transcript & { kind: "transcript" }) | (Note & { kind: "note" });
+export interface UserDocumentsGetDTO {
+  transcripts: TranscriptGetDTO[];
+  notes: NoteGetDTO[];
+}
+
+export type DocumentItem =
+  | (TranscriptGetDTO & { kind: "transcript" })
+  | (NoteGetDTO & { kind: "note" });
