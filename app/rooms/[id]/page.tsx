@@ -1,19 +1,19 @@
 "use client";
 
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {useParams, useRouter} from 'next/navigation';
-import {Button, Form, Input, Segmented} from "antd";
+import {Button, Form, Input, Segmented, Spin} from "antd";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import dynamic from 'next/dynamic';
-import { User } from "@/types/user";
+import {User} from "@/types/user";
 import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
 import {CloseCircleOutlined} from "@ant-design/icons";
 
 
-const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false });
+const MDEditor = dynamic(() => import('@uiw/react-md-editor'), {ssr: false});
 
 export interface Room {
     id: number;
@@ -27,25 +27,25 @@ export interface Room {
 const RoomPage: React.FC = () => {
     const router = useRouter();
     const apiService = useApi();
-    const { token, isReady } = useAuth();
-    const { id } = useParams();
+    const {token, isReady} = useAuth();
+    const {id} = useParams();
     const clientRef = useRef<HTMLVideoElement>(null);
+    const remoteRef = useRef<HTMLVideoElement>(null);
     const wsRef = useRef<WebSocket>(null);
     const [messages, setMessages] = useState<unknown[]>([]);
     const [markdownText, setMarkdownText] = useState<string>("");
     const [activeEditor, setActiveEditor] = useState<string>("Loading...");
     const [participants, setParticipants] = useState<string[]>(["Loading...", "Waiting..."]);
     const [myUsername, setMyUsername] = useState<string>("");
-    const { value: myUserId } = useLocalStorage<string>("id", "");
-    const { clear: clearToken } = useLocalStorage<string>("token", "");
+    const {value: myUserId} = useLocalStorage<string>("id", "");
     const [roomName, setRoomName] = useState<string>("Loading...");
     const [occupancy, setOccupancy] = useState<number>(0);
 
     const leaveRoom = (): void => {
-        // Clear token using the returned function 'clear' from the hook
         apiService.put(`/rooms/${id}/leave`, null, token);
         router.push("/mainpage");
     };
+
     useEffect(() => {
         if (!isReady || !token || !id) return;
 
@@ -109,7 +109,9 @@ const RoomPage: React.FC = () => {
 
     useEffect(() => {
         if (!isReady) return;
-        const socket = new WebSocket(`ws://localhost:8080/ws/SocketsHandler?token=${token}`);
+        const socket = new WebSocket(`ws://localhost:8080/ws/SocketsHandler?token=${token}&roomId=${id}`);
+
+
         wsRef.current = socket;
 
         socket.onopen = () => {
@@ -128,34 +130,33 @@ const RoomPage: React.FC = () => {
         };
     }, [apiService, token, isReady]);
 
-    const send = (data:string) => {
+    const send = (data: string) => {
         wsRef.current?.send(JSON.stringify({data}));
     };
 
-
     useEffect(() => {
-        if(!isReady) return; //ensure token is loaded
+        if (!isReady) return; //ensure token is loaded
         let stream: MediaStream | null;
-        const startMediaDevice = async() =>{
+        const startMediaDevice = async () => {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
                 clientRef.current!.srcObject = stream;
-            }
-           catch (error) {
+            } catch (error) {
                 console.error("Error accessing media devices.", error);
-           }
+            }
         }
         startMediaDevice();
-        return() =>{
+        return () => {
             stream?.getTracks().forEach(track => track.stop());
             if (clientRef.current) {
                 clientRef.current.srcObject = null
-            };
+            }
+            ;
         }
     }, [apiService, token, isReady]);
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100vh", color: "blueviolet" }}>
+        <div style={{display: "flex", flexDirection: "column", width: "100%", height: "100vh"}}>
 
             <div className={styles.navbar}>
                 <div className={styles.logoWrapper}>
@@ -168,62 +169,114 @@ const RoomPage: React.FC = () => {
                     />
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-                    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "flex-end" }}>
-                        <div style={{ margin: 0, color: "black", fontSize: "16px", fontWeight: "bold", lineHeight: "1.2" }}>
+                <div style={{display: "flex", alignItems: "center", gap: "24px"}}>
+                    <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        alignItems: "flex-end"
+                    }}>
+                        <div style={{
+                            margin: 0,
+                            color: "black",
+                            fontSize: "16px",
+                            fontWeight: "bold",
+                            lineHeight: "1.2"
+                        }}>
                             {roomName}
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "black", fontSize: "13px", marginTop: "2px" }}>
-                            <span style={{ width: "8px", height: "8px", backgroundColor: "#48bb78", borderRadius: "50%", display: "inline-block" }}></span>
+                        <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            color: "black",
+                            fontSize: "13px",
+                            marginTop: "2px"
+                        }}>
+                            <span style={{
+                                width: "8px",
+                                height: "8px",
+                                backgroundColor: "#48bb78",
+                                borderRadius: "50%",
+                                display: "inline-block"
+                            }}></span>
                             {occupancy}/2 in room
                         </div>
                     </div>
                     <div className={styles.navButtons}>
-                        <Button color="danger" variant="text" icon={<CloseCircleOutlined/>}
-                                onClick={leaveRoom}>
+                        <Button color="danger" variant="text" icon={<CloseCircleOutlined/>} onClick={leaveRoom}>
                             Leave Call
                         </Button>
                     </div>
                 </div>
             </div>
-            <div style={{ display: "flex", flex: 1 }}>
 
+            <div style={{display: "flex", flex: 1}}>
                 <div style={{
                     flex: 1,
                     display: "flex",
                     flexDirection: "column",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    gap: "24px",
-                    padding: "24px",
-                    borderRight: "1px solid #e5e7eb"
+                    overflow: "hidden",
+                    margin: "12px"
                 }}>
-                    <div style={{ width: "100%", maxWidth: "600px" }}>
+                    <div style={{flex: 1, position: "relative", backgroundColor: "#1a0533"}}>
+                        {occupancy < 2 ? (
+                            <div style={{
+                                width: "100%",
+                                height: "100%",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "16px",
+                                color: "#ffffff"
+                            }}>
+                                <Spin size="large"/>
+                                <p style={{margin: 0, fontSize: "16px"}}>Waiting for someone to join...</p>
+                            </div>
+                        ) : (
+                            <video
+                                ref={remoteRef}
+                                autoPlay
+                                style={{width: "100%", height: "100%", objectFit: "cover"}}
+                            />
+                        )}
+
                         <video
                             ref={clientRef}
                             autoPlay
                             muted
-                            style={{ width: "100%", borderRadius: "8px", backgroundColor: "#1a1a1a" }}
+                            style={{
+                                position: "absolute",
+                                top: "16px",
+                                left: "16px",
+                                width: "200px",
+                                borderRadius: "12px",
+                                backgroundColor: "#2e1065"
+                            }}
+                            poster="/nocamera.png"
                         />
                     </div>
-                    <div style={{ width: "100%", maxWidth: "400px" }}>
-                        <Form onFinish={(values) => send(values)} layout="vertical">
-                            <Form.Item name="message" label="Message" style={{ marginBottom: "12px" }}>
-                                <Input placeholder="Type a message..." />
-                            </Form.Item>
 
-                            <div style={{ display: "flex", gap: "12px" }}>
-                                <Button htmlType="submit" type="primary" style={{ flex: 1 }}>
-                                    Send Message
-                                </Button>
-                            </div>
+                    <div style={{padding: "12px 24px", borderTop: "1px solid #e5e7eb"}}>
+                        <Form onFinish={(values) => send(values)} layout="inline">
+                            <Form.Item name="message" style={{flex: 1, marginBottom: 0}}>
+                                <Input placeholder="Type a message..."/>
+                            </Form.Item>
+                            <Form.Item style={{marginBottom: 0}}>
+                                <Button htmlType="submit" type="primary">Send</Button>
+                            </Form.Item>
                         </Form>
                     </div>
                 </div>
-
-                <div style={{ flex: 1, padding: "24px", display: "flex", flexDirection: "column" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                        <h2 style={{ color: "black", margin: 0 }}>Shared Notes</h2>
+                <div style={{flex: 1, padding: "24px", display: "flex", flexDirection: "column"}}>
+                    <div style={{
+                        display: "flex", //notes linke seite
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "16px"
+                    }}>
+                        <h2 style={{color: "black", margin: 0}}>Shared Notes</h2>
 
                         <Segmented
                             options={participants}
@@ -232,7 +285,7 @@ const RoomPage: React.FC = () => {
                         />
                     </div>
 
-                    <div data-color-mode="light" style={{ flex: 1 }}>
+                    <div data-color-mode="light" style={{flex: 1}}>
                         <MDEditor
                             value={markdownText}
                             onChange={(value) => setMarkdownText(value || '')}
