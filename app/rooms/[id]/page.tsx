@@ -32,6 +32,7 @@ const RoomPage: React.FC = () => {
     const clientRef = useRef<HTMLVideoElement>(null);
     const remoteRef = useRef<HTMLVideoElement>(null);
     const wsRef = useRef<WebSocket>(null);
+    const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
     const [messages, setMessages] = useState<unknown[]>([]);
     const [markdownText, setMarkdownText] = useState<string>("");
     const [activeEditor, setActiveEditor] = useState<string>("Loading...");
@@ -42,6 +43,8 @@ const RoomPage: React.FC = () => {
     const [occupancy, setOccupancy] = useState<number>(0);
 
     const leaveRoom = (): void => {
+        peerConnectionRef.current?.close();
+        peerConnectionRef.current = null;
         apiService.put(`/rooms/${id}/leave`, null, token);
         router.push("/mainpage");
     };
@@ -108,6 +111,12 @@ const RoomPage: React.FC = () => {
     }, [apiService, id, isReady, token, myUserId]);
 
     useEffect(() => {
+        if (occupancy === 2 && !peerConnectionRef.current) {
+            startCall();
+        }
+    }, [occupancy]);
+
+    useEffect(() => {
         if (!isReady) return;
         const socket = new WebSocket(`ws://localhost:8080/ws/SocketsHandler?token=${token}&roomId=${id}`);
 
@@ -117,8 +126,20 @@ const RoomPage: React.FC = () => {
         socket.onopen = () => {
             socket.send(JSON.stringify({id}));
         }
-        socket.onmessage = (event) => {
-            setMessages((prev) => [...prev, event.data]);
+        socket.onmessage = async (event) => {
+            const message = JSON.parse(event.data);
+
+            if (message.type === "offer") {
+                await answerCall(message.offer);
+            }
+
+            if (message.type === "answer") {
+                await peerConnectionRef.current?.setRemoteDescription(message.answer);
+            }
+
+            if (message.type === "ice-candidate") {
+                await peerConnectionRef.current?.addIceCandidate(message.candidate);
+            }
         };
 
         socket.onerror = (err) => {
@@ -133,6 +154,62 @@ const RoomPage: React.FC = () => {
     const send = (data: string) => {
         wsRef.current?.send(JSON.stringify({data}));
     };
+
+    const setupPeerConnection = () => {
+
+        const session = new RTCPeerConnection(); //start
+        peerConnectionRef.current = session;
+
+        const ownStream = clientRef.current?.srcObject as MediaStream | null;  //kamera added
+        if (ownStream) {
+            ownStream.getTracks().forEach(track => session.addTrack(track, ownStream));
+        }
+
+        session.ontrack = (event) => { //partner video
+            if (remoteRef.current) {
+                remoteRef.current.srcObject = event.streams[0];
+            }
+        };
+
+        session.onicecandidate = (event) => { //transfer zu websocket
+            if (event.candidate && wsRef.current) {
+                wsRef.current.send(JSON.stringify({
+                    type: "ice-candidate",
+                    candidate: event.candidate
+                }));
+            }
+        };
+
+        return session;
+    };
+
+
+    const startCall = async () => {
+        const session = setupPeerConnection();
+
+        const offer = await session.createOffer();
+        await session.setLocalDescription(offer);
+
+        wsRef.current?.send(JSON.stringify({
+            type: "offer",
+            offer: offer
+        }));
+    };
+
+    const answerCall = async (offer: RTCSessionDescriptionInit) => {
+        const session = setupPeerConnection();
+
+        await session.setRemoteDescription(offer);
+
+        const answer = await session.createAnswer();
+        await session.setLocalDescription(answer);
+
+        wsRef.current?.send(JSON.stringify({
+            type: "answer",
+            answer: answer
+        }));
+    };
+
 
     useEffect(() => {
         if (!isReady) return; //ensure token is loaded
