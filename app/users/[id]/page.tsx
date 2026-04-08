@@ -10,6 +10,7 @@ import mainStyles from "@/styles/mainpage.module.css";
 import profileStyles from "@/styles/profile.module.css";
 import {LogoutOutlined} from "@ant-design/icons";
 import Image from "next/image";
+import {PasswordInput} from "antd-password-input-strength";
 
 
 interface FormFieldProps {
@@ -30,6 +31,9 @@ const Profile: React.FC = () => {
     const [editUsername, setEditUsername] = useState<string>("");
     const [editBio, setEditBio] = useState<string>("");
     const [editDisability, setEditDisability] = useState<"HEARING" | "DEAF">("HEARING");
+    const [level, setLevel] = useState(0);
+    const minLevel = 1;
+    const errorMessage = "Password is too weak";
 
 
     useEffect(() => {
@@ -184,12 +188,55 @@ const Profile: React.FC = () => {
                         <div style={{fontSize: 24, fontWeight: 600, color: "#101828"}}>Change Password</div>
                         <div style={{color: "#4a5565", marginTop: 4, marginBottom: 24}}>You will be logged out after changing your password</div>
                         <Form layout="vertical" onFinish={changePassword}>
-                            <Form.Item label="New Password" name="password"
-                                       rules={[{required: true, message: "Please enter a new password"}]}>
-                                <Input.Password placeholder="Enter new password"/>
+                            <Form.Item
+                                label="New Password"
+                                name="password"
+                                rules={[
+                                    {required: true, message: "Please enter a new password"},
+                                    {
+                                        validator: async () => {
+                                            return level >= minLevel
+                                                ? Promise.resolve()
+                                                : Promise.reject(errorMessage);
+                                        },
+                                    }
+                                ]}
+                            >
+                                <PasswordInput
+                                    onLevelChange={setLevel}
+                                    settings={{
+                                        colorScheme: {
+                                            levels: [
+                                                "#ff4d4f",
+                                                "#faad14",
+                                                "#52c41a",
+                                                "#52c41a",
+                                                "#52c41a",
+                                            ],
+                                            noLevel: "#434343",
+                                        },
+                                        height: 5,
+                                        alwaysVisible: false,
+                                    }}
+                                    placeholder="Enter new password"
+                                />
                             </Form.Item>
-                            <Form.Item label="Confirm Password" name="confirmPassword"
-                                       rules={[{required: true, message: "Please confirm your password"}]}>
+                            <Form.Item
+                                label="Confirm Password"
+                                name="confirmPassword"
+                                dependencies={['password']}
+                                rules={[
+                                    {required: true, message: "Please confirm your password"},
+                                    ({ getFieldValue }) => ({
+                                        validator(_, value) {
+                                            if (!value || getFieldValue('password') === value) {
+                                                return Promise.resolve();
+                                            }
+                                            return Promise.reject(new Error("The passwords do not match!"));
+                                        },
+                                    }),
+                                ]}
+                            >
                                 <Input.Password placeholder="Confirm new password"/>
                             </Form.Item>
                             <Button type="primary" htmlType="submit">Update Password</Button>
