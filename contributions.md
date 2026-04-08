@@ -66,9 +66,12 @@ reason).
 
 ---
 
-## Contributions Week 3 - [Begin Date] to [End Date]
+## Contributions Week 3 - [06.04.2026] to [13.04.2026]
 
-_Continue with the same table format as above._
+| **Student**        | **Date** | **Link to Commit** | **Description**                                                                                                                                                                                                                | **Relevance**                                                                                                                                                                                               |
+|--------------------|----------|--------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **@tcaselas**      | 08.04.26 |                    | Synchronized markdown file and button to change editor rights for the file. Also added that the mainpage fetches the status of users and rooms every 3 seconds to update them automatically without having to reload the page. | Now both users in the room see the changes made in the markdown file simultaneously. Also when a user uses the button to edit the file, the second user gets set on preview mode and can't change anything. |
+|                    |          |                    |                                                                                                                                                                                                                                |                                                                                                                                                                                                             |
 
 ---
 

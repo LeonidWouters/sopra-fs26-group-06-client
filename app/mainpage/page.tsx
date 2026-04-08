@@ -74,27 +74,23 @@ const HomePage: React.FC = () => {
                 setUserId(parsedId);
 
                 const fetchedUser: User = await apiService.get<User>(`/users/${parsedId}`, token);
-                setUser(fetchedUser);
+                setUser((prev) => JSON.stringify(prev) === JSON.stringify(fetchedUser) ? prev : fetchedUser);
                 console.log("Fetched user:", fetchedUser);
 
                 const fetchedRooms: Room[] = await apiService.get<Room[]>("/rooms", token);
-                setRooms(fetchedRooms);
+                setRooms((prev) => JSON.stringify(prev) === JSON.stringify(fetchedRooms) ? prev : fetchedRooms);
                 console.log("Fetched rooms:", fetchedRooms);
 
                 const fetchedUsers: User[] = await apiService.get<User[]>("/users", token);
-                setUsers(fetchedUsers);
+                setUsers((prev) => JSON.stringify(prev) === JSON.stringify(fetchedUsers) ? prev : fetchedUsers);
                 console.log("Fetched users:", fetchedUsers);
             } catch (error) {
-                if (error instanceof Error) {
-                    alert(
-                        `Something went wrong while fetching the user:\n${error.message}`,
-                    );
-                } else {
-                    console.error("An unknown error occurred while fetching the user.");
-                }
+                console.error("Error fetching data in background:", error);
             }
         };
         fetchUser();
+        const interval = setInterval(fetchUser, 3000);
+        return () => clearInterval(interval);
     }, [apiService, isReady, token, router]);
 
     const handleJoinRoom = async (roomId: number) => {

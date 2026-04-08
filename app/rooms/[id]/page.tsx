@@ -140,6 +140,14 @@ const RoomPage: React.FC = () => {
             if (message.type === "ice-candidate") {
                 await peerConnectionRef.current?.addIceCandidate(message.candidate);
             }
+
+            if (message.type === "markdown-update") {
+                setMarkdownText(message.content);
+            }
+
+            if (message.type === "editor-change") {
+                setActiveEditor(message.editor);
+            }
         };
 
         socket.onerror = (err) => {
@@ -154,6 +162,7 @@ const RoomPage: React.FC = () => {
     const send = (data: string) => {
         wsRef.current?.send(JSON.stringify({data}));
     };
+
 
     const setupPeerConnection = () => {
 
@@ -358,14 +367,26 @@ const RoomPage: React.FC = () => {
                         <Segmented
                             options={participants}
                             value={activeEditor}
-                            onChange={(value) => setActiveEditor(value as string)}
+                            onChange={(value) => {
+                                const newEditor = value as string;
+                                setActiveEditor(newEditor);
+                                if (wsRef.current?.readyState === WebSocket.OPEN) {
+                                    wsRef.current.send(JSON.stringify({ type: "editor-change", editor: newEditor }));
+                                }
+                            }}
                         />
                     </div>
 
                     <div data-color-mode="light" style={{flex: 1}}>
                         <MDEditor
                             value={markdownText}
-                            onChange={(value) => setMarkdownText(value || '')}
+                            onChange={(value) => {
+                                const newText = value || '';
+                                setMarkdownText(newText);
+                                if (wsRef.current?.readyState === WebSocket.OPEN) {
+                                    wsRef.current.send(JSON.stringify({ type: "markdown-update", content: newText }));
+                                }
+                            }}
                             height={600}
                             preview={activeEditor === myUsername ? "live" : "preview"}
                             textareaProps={{
