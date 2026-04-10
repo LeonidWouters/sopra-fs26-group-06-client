@@ -41,13 +41,26 @@ const RoomPage: React.FC = () => {
     const {value: myUserId} = useLocalStorage<string>("id", "");
     const [roomName, setRoomName] = useState<string>("Loading...");
     const [occupancy, setOccupancy] = useState<number>(0);
+    const [callStarted, setCallStarted] = useState<boolean>(false);
 
-    const leaveRoom = (): void => {
+    const leaveRoom = async(): Promise<void> => {
         peerConnectionRef.current?.close();
         peerConnectionRef.current = null;
-        apiService.put(`/rooms/${id}/leave`, null, token);
-        router.push("/mainpage");
-    };
+
+        if (markdownText.trim() !== "" && callStarted) {
+            try {
+                const sessionId = crypto.randomUUID();
+                await apiService.post("/notes", {
+                    content: markdownText,
+                    sessionId: sessionId
+                }, token);
+
+            } catch (error) {
+                console.error("Couldnt save notes:", error);
+            }
+        }
+        await apiService.put(`/rooms/${id}/leave`, null, token);
+        router.push("/mainpage"); };
 
     useEffect(() => {
         if (!isReady || !token || !id) return;
@@ -69,7 +82,9 @@ const RoomPage: React.FC = () => {
                     const caller = await apiService.get<User>(`/users/${room.CallerID}`, token);
                     if (caller.username) {
                         users.push(caller.username);
-                        if (String(caller.id) === String(myUserId)) myName = caller.username;
+                        if (String(caller.id) === String(myUserId)) {
+                            myName = caller.username;
+                        }
                     }
                 }
 
@@ -111,8 +126,12 @@ const RoomPage: React.FC = () => {
     }, [apiService, id, isReady, token, myUserId]);
 
     useEffect(() => {
-        if (occupancy === 2 && !peerConnectionRef.current) {
-            startCall();
+        if (occupancy === 2) {
+            setCallStarted(true);
+
+            if (!peerConnectionRef.current) {
+                startCall();
+            }
         }
     }, [occupancy]);
 

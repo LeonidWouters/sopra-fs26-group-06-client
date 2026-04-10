@@ -98,6 +98,7 @@ const TranscriptsPage: React.FC = () => {
                         width={200}
                         height={55}
                         style={{ width: "auto", maxWidth: "200px", height: "100%", maxHeight: "55px" }}
+                        onClick={() => router.push("/mainpage")}
                     />
                 </div>
                 <div className={mainStyles.navButtons}>
