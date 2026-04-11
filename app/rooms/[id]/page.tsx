@@ -42,8 +42,11 @@ const RoomPage: React.FC = () => {
     const [roomName, setRoomName] = useState<string>("Loading...");
     const [occupancy, setOccupancy] = useState<number>(0);
     const [callStarted, setCallStarted] = useState<boolean>(false);
+    const [disabilityStatusLocal, setDisabilityStatusLocal] = useState<string>("");
+    const [disabilityStatusRemote, setDisabilityStatusRemote] = useState<string>("");
+    const speechRef = useRef<SpeechRecognition>(null);
 
-    const leaveRoom = async(): Promise<void> => {
+    const leaveRoom = async (): Promise<void> => {
         peerConnectionRef.current?.close();
         peerConnectionRef.current = null;
 
@@ -60,7 +63,8 @@ const RoomPage: React.FC = () => {
             }
         }
         await apiService.put(`/rooms/${id}/leave`, null, token);
-        router.push("/mainpage"); };
+        router.push("/mainpage");
+    };
 
     useEffect(() => {
         if (!isReady || !token || !id) return;
@@ -238,6 +242,111 @@ const RoomPage: React.FC = () => {
         }));
     };
 
+    const setDS = async () => {
+        const room = await apiService.get<Room>(`/rooms/${id}`, token);
+        const user1 = await apiService.get<User>(`/users/${room.CallerID}`, token)
+        const user2 = await apiService.get<User>(`/users/${room.CalleeID}`, token)
+        if (myUserId == room.CallerID?.toString()) {
+
+            setDisabilityStatusLocal(user1.disabilityStatus || "Unknown");
+            setDisabilityStatusRemote(user2.disabilityStatus || "Unknown");
+        }
+
+        if (myUserId == room.CalleeID?.toString()) {
+            setDisabilityStatusLocal(user2.disabilityStatus || "Unknown");
+            setDisabilityStatusRemote(user1.disabilityStatus || "Unknown");
+        }
+    };
+
+    function startTTT() {
+
+    }
+
+    function startSTT() {
+        if(speechRef.current){
+            speechRef.current.stop();
+        }
+
+
+        speechRef.current = new window.SpeechRecognition();
+        speechRef.current.continuous = true;
+        speechRef.current.interimResults = true;
+        speechRef.current.start();
+
+        speechRef.current.onresult = event => {
+            let message = "";
+            console.log(event.results);
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                message += event.results[i][0].transcript;
+
+                if (event.results[i].isFinal) {
+                    console.log("Final transcript:", message);
+
+                    if (wsRef.current?.readyState === WebSocket.OPEN) {
+                        wsRef.current.send(JSON.stringify({
+                            type: "speech-to-text",
+                            content: message
+                        }));
+                    }
+                }
+            }
+        };
+
+        const stopSpeechRecognition = () => {
+            if (speechRef.current) {
+                speechRef.current.stop();
+            }
+        }
+        return stopSpeechRecognition;
+    }
+
+
+    function startTTS() {
+
+    }
+
+    useEffect(() => {
+        if (!callStarted || !isReady) return;
+
+        const loadDisabilityStatus = async () => {
+            await setDS();
+        };
+
+        loadDisabilityStatus();
+    }, [callStarted, isReady]);
+
+    useEffect(() => {
+        if (!callStarted || !isReady) return;
+
+        if (!disabilityStatusLocal || !disabilityStatusRemote) return;
+
+        console.log("Accessibility check", {
+            disabilityStatusLocal,
+            disabilityStatusRemote,
+        });
+
+
+        const initializeAccessibility = async () => {
+
+            if (disabilityStatusLocal == "DEAF" && disabilityStatusRemote == "DEAF") {
+                console.log("TTT")
+                startTTT();
+            }
+            if (disabilityStatusRemote == "DEAF" && disabilityStatusLocal == "HEARING") {
+                console.log("STT")
+                startSTT();
+            }
+            if (disabilityStatusLocal == "HEARING" && disabilityStatusRemote == "HEARING") {
+                console.log("do nothing")
+            }
+            if (disabilityStatusRemote == "HEARING" && disabilityStatusLocal == "DEAF") {
+                console.log("TTS")
+                startTTS();
+            }
+        };
+
+        initializeAccessibility();
+    }, [callStarted, isReady,disabilityStatusRemote,disabilityStatusLocal]);
 
     useEffect(() => {
         if (!isReady) return; //ensure token is loaded
