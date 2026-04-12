@@ -46,6 +46,7 @@ const RoomPage: React.FC = () => {
     const [disabilityStatusRemote, setDisabilityStatusRemote] = useState<string>("");
     const [subtitleText, setSubtitleText] = useState<string>("");
     const speechRef = useRef<SpeechRecognition>(null);
+    const ttsEnabledRef = useRef<boolean>(false);
     const [chat, setChat] = useState<boolean>(false);
     const [chatHistory,setChatHistory] = useState(false);
 
@@ -74,6 +75,10 @@ const RoomPage: React.FC = () => {
         await apiService.put(`/rooms/${id}/leave`, null, token);
         router.push("/mainpage");
     };
+
+    useEffect(() => {
+        if (isReady && !token) router.push("/login");
+    }, [isReady, token]);
 
     useEffect(() => {
         if (!isReady || !token || !id) return;
@@ -183,6 +188,9 @@ const RoomPage: React.FC = () => {
 
             if (message.type === "text-msg") {
                 setMessages((messages) => [...messages, message.content]);
+                if (ttsEnabledRef.current) {
+                    window.speechSynthesis.speak(new SpeechSynthesisUtterance(message.content.message));
+                }
             }
 
             if (message.type === "speech-to-text") {
@@ -343,7 +351,7 @@ const RoomPage: React.FC = () => {
 
 
     function startTTS() {
-
+        ttsEnabledRef.current = true;
     }
 
     useEffect(() => {
@@ -380,9 +388,13 @@ const RoomPage: React.FC = () => {
             if (disabilityStatusLocal == "HEARING" && disabilityStatusRemote == "HEARING") {
                 console.log("do nothing")
             }
-            if (disabilityStatusRemote == "HEARING" && disabilityStatusLocal == "DEAF") {
+            if (disabilityStatusRemote == "DEAF" && disabilityStatusLocal == "HEARING") {
                 console.log("TTS")
                 startTTS();
+            }
+            if (disabilityStatusLocal == "DEAF" && disabilityStatusRemote == "HEARING") {
+                console.log("chat for deaf")
+                setChat(true);
             }
         };
 
