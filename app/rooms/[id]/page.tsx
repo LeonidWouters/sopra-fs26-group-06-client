@@ -33,7 +33,7 @@ const RoomPage: React.FC = () => {
     const remoteRef = useRef<HTMLVideoElement>(null);
     const wsRef = useRef<WebSocket>(null);
     const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
-    const [messages, setMessages] = useState<string[]>([]);
+    const [messages, setMessages] = useState<textMsg[]>([]);
     const [markdownText, setMarkdownText] = useState<string>("");
     const [activeEditor, setActiveEditor] = useState<string>("Loading...");
     const [participants, setParticipants] = useState<string[]>(["Loading...", "Waiting..."]);
@@ -47,6 +47,12 @@ const RoomPage: React.FC = () => {
     const speechRef = useRef<SpeechRecognition>(null);
     const [chat, setChat] = useState<boolean>(false);
     const [chatHistory,setChatHistory] = useState(false);
+
+    interface textMsg {
+        message: string;
+        client: boolean; //handle local vs remote messages
+        timestamp: string;
+    }
 
     const leaveRoom = async (): Promise<void> => {
         peerConnectionRef.current?.close();
@@ -189,11 +195,23 @@ const RoomPage: React.FC = () => {
     }, [apiService, token, isReady]);
 
     const sendText = (data:string) => {
+        const remoteMessage : textMsg = {
+            message : data,
+            client: false,
+            timestamp: new Date().toLocaleDateString([], { hour: '2-digit', minute: '2-digit' })
+        }
+
+        const localMessage : textMsg = {
+            message : data,
+            client : true,
+            timestamp : new Date().toLocaleDateString([], { hour: '2-digit', minute: '2-digit' })
+        }
+
         wsRef.current?.send(JSON.stringify({
             type: "text-msg",
-            content: data
+            content: remoteMessage,
         }));
-        setMessages((messages) => [...messages, data]);
+        setMessages((messages) => [...messages, localMessage]);
     };
 
     const loadChat = () => {
@@ -461,7 +479,7 @@ const RoomPage: React.FC = () => {
                                 alignItems: "center",
                                 justifyContent: "center",
                                 gap: "16px",
-                                color: "#ffffff"
+                                color: "#c9c2c2"
                             }}>
                                 <Spin size="large"/>
                                 <p style={{margin: 0, fontSize: "16px"}}>Waiting for someone to join...</p>
@@ -491,7 +509,7 @@ const RoomPage: React.FC = () => {
                     </div>
 
                     <div style={{padding: "12px 24px", borderTop: "1px solid #e5e7eb"}}>
-                        <Form onFinish={(values) => sendText( new Date().toLocaleDateString([], { hour: '2-digit', minute: '2-digit' }) + " : " + values.message)} layout="inline">
+                        <Form onFinish={(values) => sendText(values.message)} layout="inline">
                             <Form.Item name="message" style={{flex: 1, marginBottom: 0}} hidden={!chat}>
                                 <Input placeholder="Type a message..."/>
                             </Form.Item>
@@ -502,8 +520,8 @@ const RoomPage: React.FC = () => {
                         <Button type ="default" onClick={loadChat}>show chat history</Button>
                         <Drawer title = "Chat History" open={chatHistory} onClose={closeChat} placement={"left"} mask={false}>
                             {messages.map((msg, index) => <div key={index}
-                            style={{padding: "8px 12px", marginBottom: "8px", backgroundColor: "#f3f4f6", borderRadius: "8px"}}
-                            >{msg}</div>)}
+                            style={{padding: "8px 12px", marginBottom: "8px", backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: "8px", color : "white", justifyContent : msg.client ? "flex-start" : "flex-end"}}>
+                            >{msg.timestamp +" : "+ msg.message}</div>)}
                         </Drawer>
                     </div>
                 </div>
