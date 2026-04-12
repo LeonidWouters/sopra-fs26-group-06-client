@@ -44,6 +44,7 @@ const RoomPage: React.FC = () => {
     const [callStarted, setCallStarted] = useState<boolean>(false);
     const [disabilityStatusLocal, setDisabilityStatusLocal] = useState<string>("");
     const [disabilityStatusRemote, setDisabilityStatusRemote] = useState<string>("");
+    const [subtitleText, setSubtitleText] = useState<string>("");
     const speechRef = useRef<SpeechRecognition>(null);
 
     const leaveRoom = async (): Promise<void> => {
@@ -170,6 +171,10 @@ const RoomPage: React.FC = () => {
 
             if (message.type === "editor-change") {
                 setActiveEditor(message.editor);
+            }
+
+            if (message.type === "speech-to-text") {
+                setSubtitleText(message.content);
             }
         };
 
@@ -470,6 +475,26 @@ const RoomPage: React.FC = () => {
                             }}
                             poster="/nocamera.png"
                         />
+
+                        {subtitleText && (
+                            <div style={{
+                                position: "absolute",
+                                bottom: "16px",
+                                left: "50%",
+                                transform: "translateX(-50%)",
+                                backgroundColor: "rgba(0, 0, 0, 0.65)",
+                                color: "#ffffff",
+                                padding: "10px 24px",
+                                borderRadius: "8px",
+                                fontSize: "16px",
+                                fontWeight: 500,
+                                maxWidth: "80%",
+                                textAlign: "center",
+                                pointerEvents: "none",
+                            }}>
+                                {subtitleText}
+                            </div>
+                        )}
                     </div>
 
                     <div style={{padding: "12px 24px", borderTop: "1px solid #e5e7eb"}}>
