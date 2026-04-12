@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button, Spin } from "antd";
-import { DeleteOutlined, DownloadOutlined, FileTextOutlined, LogoutOutlined } from "@ant-design/icons";
+import { DeleteOutlined, DownloadOutlined, EyeOutlined, FileTextOutlined, LogoutOutlined } from "@ant-design/icons";
 import Image from "next/image";
 import mainStyles from "@/styles/mainpage.module.css";
 import styles from "./transcripts.module.css";
@@ -145,9 +145,9 @@ const TranscriptsPage: React.FC = () => {
                                     {item.kind === "transcript" ? "Transcript" : "Note"}
                                 </div>
                                 <Button
-                                    icon={<DownloadOutlined />}
+                                    icon={<EyeOutlined />}
                                     block
-                                    onClick={() => handleDownload(item)}
+                                    onClick={() => router.push(`/users/${id}/transcripts/${item.id}?kind=${item.kind}`)}
                                     style={{
                                         background: "linear-gradient(90deg, #4f46e5, #7c3aed)",
                                         border: "none",
@@ -155,6 +155,18 @@ const TranscriptsPage: React.FC = () => {
                                         borderRadius: 8,
                                         fontWeight: 500,
                                         marginTop: 16,
+                                    }}
+                                >
+                                    View
+                                </Button>
+                                <Button
+                                    icon={<DownloadOutlined />}
+                                    block
+                                    onClick={() => handleDownload(item)}
+                                    style={{
+                                        borderRadius: 8,
+                                        fontWeight: 500,
+                                        marginTop: 8,
                                     }}
                                 >
                                     Download
