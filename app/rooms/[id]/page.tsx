@@ -186,7 +186,7 @@ const RoomPage: React.FC = () => {
                 setActiveEditor(message.editor);
             }
 
-            if (message.type === "text-msg"){
+            if (message.type === "text-msg") {
                 setMessages((messages) => [...messages, message.content]);
                 if (ttsEnabledRef.current) {
                     window.speechSynthesis.speak(new SpeechSynthesisUtterance(message.content.message));
@@ -558,7 +558,7 @@ const RoomPage: React.FC = () => {
                         <Drawer title = "Chat History" open={chatHistory} onClose={closeChat} placement={"left"} mask={false}>
                             {messages.map((msg, index) => <div key={index}
                             style={{padding: "8px 12px", marginBottom: "8px", backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: "8px", color : "white", justifyContent : msg.client ? "flex-start" : "flex-end"}}>
-                            >{msg.timestamp +" : "+ msg.message}</div>)}
+                            {msg.timestamp + " : " + msg.message}</div>)}
                         </Drawer>
                     </div>
                 </div>
