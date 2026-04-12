@@ -2,7 +2,7 @@
 
 import React, {useEffect, useRef, useState} from 'react';
 import {useParams, useRouter} from 'next/navigation';
-import {Button, Form, Input, Segmented, Spin} from "antd";
+import {Button, Form, Input, Segmented, Spin,Drawer} from "antd";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
@@ -33,7 +33,7 @@ const RoomPage: React.FC = () => {
     const remoteRef = useRef<HTMLVideoElement>(null);
     const wsRef = useRef<WebSocket>(null);
     const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
-    const [messages, setMessages] = useState<unknown[]>([]);
+    const [messages, setMessages] = useState<textMsg[]>([]);
     const [markdownText, setMarkdownText] = useState<string>("");
     const [activeEditor, setActiveEditor] = useState<string>("Loading...");
     const [participants, setParticipants] = useState<string[]>(["Loading...", "Waiting..."]);
@@ -46,6 +46,14 @@ const RoomPage: React.FC = () => {
     const [disabilityStatusRemote, setDisabilityStatusRemote] = useState<string>("");
     const [subtitleText, setSubtitleText] = useState<string>("");
     const speechRef = useRef<SpeechRecognition>(null);
+    const [chat, setChat] = useState<boolean>(false);
+    const [chatHistory,setChatHistory] = useState(false);
+
+    interface textMsg {
+        message: string;
+        client: boolean; //handle local vs remote messages
+        timestamp: string;
+    }
 
     const leaveRoom = async (): Promise<void> => {
         peerConnectionRef.current?.close();
@@ -173,6 +181,8 @@ const RoomPage: React.FC = () => {
                 setActiveEditor(message.editor);
             }
 
+            if (message.type === "text-msg"){
+                setMessages((messages) => [...messages, message.content]);
             if (message.type === "speech-to-text") {
                 setSubtitleText(message.content);
             }
@@ -187,9 +197,33 @@ const RoomPage: React.FC = () => {
         };
     }, [apiService, token, isReady]);
 
-    const send = (data: string) => {
-        wsRef.current?.send(JSON.stringify({data}));
+    const sendText = (data:string) => {
+        const remoteMessage : textMsg = {
+            message : data,
+            client: false,
+            timestamp: new Date().toLocaleDateString([], { hour: '2-digit', minute: '2-digit' })
+        }
+
+        const localMessage : textMsg = {
+            message : data,
+            client : true,
+            timestamp : new Date().toLocaleDateString([], { hour: '2-digit', minute: '2-digit' })
+        }
+
+        wsRef.current?.send(JSON.stringify({
+            type: "text-msg",
+            content: remoteMessage,
+        }));
+        setMessages((messages) => [...messages, localMessage]);
     };
+
+    const loadChat = () => {
+        setChatHistory(true);
+    }
+
+    const closeChat = () =>{
+        setChatHistory(false);
+    }
 
 
     const setupPeerConnection = () => {
@@ -232,7 +266,6 @@ const RoomPage: React.FC = () => {
             offer: offer
         }));
     };
-
     const answerCall = async (offer: RTCSessionDescriptionInit) => {
         const session = setupPeerConnection();
 
@@ -264,6 +297,7 @@ const RoomPage: React.FC = () => {
     };
 
     function startTTT() {
+        setChat(true);//turns on chat feature so it is visible
 
     }
 
@@ -448,7 +482,7 @@ const RoomPage: React.FC = () => {
                                 alignItems: "center",
                                 justifyContent: "center",
                                 gap: "16px",
-                                color: "#ffffff"
+                                color: "#c9c2c2"
                             }}>
                                 <Spin size="large"/>
                                 <p style={{margin: 0, fontSize: "16px"}}>Waiting for someone to join...</p>
@@ -498,14 +532,20 @@ const RoomPage: React.FC = () => {
                     </div>
 
                     <div style={{padding: "12px 24px", borderTop: "1px solid #e5e7eb"}}>
-                        <Form onFinish={(values) => send(values)} layout="inline">
-                            <Form.Item name="message" style={{flex: 1, marginBottom: 0}}>
+                        <Form onFinish={(values) => sendText(values.message)} layout="inline">
+                            <Form.Item name="message" style={{flex: 1, marginBottom: 0}} hidden={!chat}>
                                 <Input placeholder="Type a message..."/>
                             </Form.Item>
-                            <Form.Item style={{marginBottom: 0}}>
-                                <Button htmlType="submit" type="primary">Send</Button>
+                            <Form.Item style={{marginBottom: 0}} hidden={!chat}>
+                                <Button htmlType="submit" type="primary" >Send</Button>
                             </Form.Item>
                         </Form>
+                        <Button type ="default" onClick={loadChat}>show chat history</Button>
+                        <Drawer title = "Chat History" open={chatHistory} onClose={closeChat} placement={"left"} mask={false}>
+                            {messages.map((msg, index) => <div key={index}
+                            style={{padding: "8px 12px", marginBottom: "8px", backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: "8px", color : "white", justifyContent : msg.client ? "flex-start" : "flex-end"}}>
+                            >{msg.timestamp +" : "+ msg.message}</div>)}
+                        </Drawer>
                     </div>
                 </div>
                 <div style={{flex: 1, padding: "24px", display: "flex", flexDirection: "column"}}>
@@ -533,7 +573,7 @@ const RoomPage: React.FC = () => {
                     <div data-color-mode="light" style={{flex: 1}}>
                         <MDEditor
                             value={markdownText}
-                            onChange={(value) => {
+                            onChange={(value: string) => {
                                 const newText = value || '';
                                 setMarkdownText(newText);
                                 if (wsRef.current?.readyState === WebSocket.OPEN) {
