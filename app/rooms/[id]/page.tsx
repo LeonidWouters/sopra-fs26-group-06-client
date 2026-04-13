@@ -587,7 +587,7 @@ const RoomPage: React.FC = () => {
                     <div data-color-mode="light" style={{flex: 1}}>
                         <MDEditor
                             value={markdownText}
-                            onChange={(value: string) => {
+                            onChange={(value: string | undefined) => {
                                 const newText = value || '';
                                 setMarkdownText(newText);
                                 if (wsRef.current?.readyState === WebSocket.OPEN) {
