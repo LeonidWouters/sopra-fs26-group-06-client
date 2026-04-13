@@ -11,6 +11,8 @@ import {User} from "@/types/user";
 import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
 import {CloseCircleOutlined} from "@ant-design/icons";
+import {isProduction} from "@/utils/environment";
+import {getApiDomain} from "@/utils/domain";
 
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), {ssr: false});
@@ -155,7 +157,7 @@ const RoomPage: React.FC = () => {
 
     useEffect(() => {
         if (!isReady) return;
-        const socket = new WebSocket(`ws://localhost:8080/ws/SocketsHandler?token=${token}&roomId=${id}`);
+        const socket = new WebSocket(`ws://${getApiDomain()}/ws/SocketsHandler?token=${token}&roomId=${id}`);
 
 
         wsRef.current = socket;
