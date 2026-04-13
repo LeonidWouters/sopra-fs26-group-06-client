@@ -10,6 +10,7 @@ import mainStyles from "@/styles/mainpage.module.css";
 import profileStyles from "@/styles/profile.module.css";
 import {LogoutOutlined} from "@ant-design/icons";
 import Image from "next/image";
+import {PasswordInput} from "antd-password-input-strength";
 
 
 interface FormFieldProps {
@@ -30,6 +31,9 @@ const Profile: React.FC = () => {
     const [editUsername, setEditUsername] = useState<string>("");
     const [editBio, setEditBio] = useState<string>("");
     const [editDisability, setEditDisability] = useState<"HEARING" | "DEAF">("HEARING");
+    const [level, setLevel] = useState(0);
+    const minLevel = 1;
+    const errorMessage = "Password is too weak";
 
 
     useEffect(() => {
@@ -104,6 +108,7 @@ const Profile: React.FC = () => {
                         width={200}
                         height={55}
                         style={{width: "auto", maxWidth: "200px", height: "100%", maxHeight: "55px"}}
+                        onClick={() => router.push("/mainpage")}
                     />
                 </div>
                 <div className={mainStyles.navButtons}>
@@ -119,23 +124,40 @@ const Profile: React.FC = () => {
             </div>
             <div className={mainStyles.mainContent}>
                 <div className={profileStyles.card}>
-                    <div style={{display: "flex", alignItems: "center", gap: 24}}>
-                        <Avatar size={88} className={profileStyles.avatar}>
-                            {user.username ? user.username.slice(0, 2).toUpperCase() : "?"}
-                        </Avatar>
-                        <div>
-                            <div style={{fontSize: 30, fontWeight: 600}}>{user.username}</div>
-                            <span style={{
-                                background: user.status === "ONLINE" ? "#00c950" : "#8a8a8a",
-                                color: "white",
-                                borderRadius: 8,
-                                padding: "2px 10px",
-                                fontSize: 12
-                            }}>
-                                {user.status === "ONLINE" ? "Online" : "Offline"}
-                            </span>
-                            <div style={{color: "#4a5565", marginTop: 8}}>{user.bio}</div>
+                    <div style={{display: "flex", alignItems: "center", justifyContent: "space-between"}}>
+                        <div style={{display: "flex", alignItems: "center", gap: 24}}>
+                            <Avatar size={88} className={profileStyles.avatar}>
+                                {user.username ? user.username.slice(0, 2).toUpperCase() : "?"}
+                            </Avatar>
+                            <div>
+                                <div style={{fontSize: 30, fontWeight: 600}}>{user.username}</div>
+                                <span style={{
+                                    background: user.status === "ONLINE" ? "#00c950" : "#8a8a8a",
+                                    color: "white",
+                                    borderRadius: 8,
+                                    padding: "2px 10px",
+                                    fontSize: 12
+                                }}>
+                                    {user.status === "ONLINE" ? "Online" : "Offline"}
+                                </span>
+                                <div style={{color: "#4a5565", marginTop: 8}}>{user.bio}</div>
+                            </div>
                         </div>
+                        <Button
+                            type="primary"
+                            onClick={() => router.push(`/users/${id}/transcripts`)}
+                            style={{
+                                background: "linear-gradient(90deg, #4f46e5, #7c3aed)",
+                                border: "none",
+                                borderRadius: 10,
+                                height: 44,
+                                padding: "0 24px",
+                                fontSize: 15,
+                                fontWeight: 500,
+                            }}
+                        >
+                            See latest transcripts/notes
+                        </Button>
                     </div>
                 </div>
 
@@ -167,12 +189,55 @@ const Profile: React.FC = () => {
                         <div style={{fontSize: 24, fontWeight: 600, color: "#101828"}}>Change Password</div>
                         <div style={{color: "#4a5565", marginTop: 4, marginBottom: 24}}>You will be logged out after changing your password</div>
                         <Form layout="vertical" onFinish={changePassword}>
-                            <Form.Item label="New Password" name="password"
-                                       rules={[{required: true, message: "Please enter a new password"}]}>
-                                <Input.Password placeholder="Enter new password"/>
+                            <Form.Item
+                                label="New Password"
+                                name="password"
+                                rules={[
+                                    {required: true, message: "Please enter a new password"},
+                                    {
+                                        validator: async () => {
+                                            return level >= minLevel
+                                                ? Promise.resolve()
+                                                : Promise.reject(errorMessage);
+                                        },
+                                    }
+                                ]}
+                            >
+                                <PasswordInput
+                                    onLevelChange={setLevel}
+                                    settings={{
+                                        colorScheme: {
+                                            levels: [
+                                                "#ff4d4f",
+                                                "#faad14",
+                                                "#52c41a",
+                                                "#52c41a",
+                                                "#52c41a",
+                                            ],
+                                            noLevel: "#434343",
+                                        },
+                                        height: 5,
+                                        alwaysVisible: false,
+                                    }}
+                                    placeholder="Enter new password"
+                                />
                             </Form.Item>
-                            <Form.Item label="Confirm Password" name="confirmPassword"
-                                       rules={[{required: true, message: "Please confirm your password"}]}>
+                            <Form.Item
+                                label="Confirm Password"
+                                name="confirmPassword"
+                                dependencies={['password']}
+                                rules={[
+                                    {required: true, message: "Please confirm your password"},
+                                    ({ getFieldValue }) => ({
+                                        validator(_, value) {
+                                            if (!value || getFieldValue('password') === value) {
+                                                return Promise.resolve();
+                                            }
+                                            return Promise.reject(new Error("The passwords do not match!"));
+                                        },
+                                    }),
+                                ]}
+                            >
                                 <Input.Password placeholder="Confirm new password"/>
                             </Form.Item>
                             <Button type="primary" htmlType="submit">Update Password</Button>

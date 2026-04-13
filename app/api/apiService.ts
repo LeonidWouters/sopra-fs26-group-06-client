@@ -83,11 +83,15 @@ class ApiService {
    * @param data - The payload to post.
    * @returns JSON data of type T.
    */
-  public async post<T>(endpoint: string, data: unknown): Promise<T> {
+  public async post<T>(endpoint: string, data: unknown, token?: string): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
+      const headers: HeadersInit = { ...this.defaultHeaders };
+      if (token) {
+          headers["token"] = token;
+      }
     const res = await fetch(url, {
       method: "POST",
-      headers: this.defaultHeaders,
+      headers: headers,
       body: JSON.stringify(data),
     });
     return this.processResponse<T>(
