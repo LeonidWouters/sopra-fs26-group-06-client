@@ -157,7 +157,7 @@ const RoomPage: React.FC = () => {
 
     useEffect(() => {
         if (!isReady) return;
-        const socket = new WebSocket(`ws://${getApiDomain()}/ws/SocketsHandler?token=${token}&roomId=${id}`);
+        const socket = new WebSocket(`${getApiDomain().replace(/^http/, "ws")}/ws/SocketsHandler?token=${token}&roomId=${id}`);
 
 
         wsRef.current = socket;
