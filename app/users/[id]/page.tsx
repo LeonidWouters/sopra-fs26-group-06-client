@@ -1,5 +1,5 @@
 "use client";
-import {Avatar, Button, Form, Input, Radio, message} from "antd";
+import {Avatar, Button, Divider, Form, Input, List, Radio, Tag, message} from "antd";
 import React, {useEffect, useState} from "react";
 import {useParams, useRouter} from "next/navigation";
 import {useApi} from "@/hooks/useApi";
@@ -34,6 +34,10 @@ const Profile: React.FC = () => {
     const [level, setLevel] = useState(0);
     const minLevel = 1;
     const errorMessage = "Password is too weak";
+    const [friends, setFriends] = useState<User[]>([]);
+    const [pendingRequests, setPendingRequests] = useState<User[]>([]);
+    const [isFriend, setIsFriend] = useState(false);
+    const [requestSent, setRequestSent] = useState(false);
 
 
     useEffect(() => {
@@ -56,6 +60,26 @@ const Profile: React.FC = () => {
         };
         fetchUser();
     }, [apiService, isReady, token, id, router]);
+
+    useEffect(() => {
+        if (!isReady || !token || !user) return;
+
+        const loadFriendData = async () => {
+            try {
+                const fetchedFriends: User[] = await apiService.get<User[]>(`/users/${id}/friends`, token);
+                setFriends(fetchedFriends);
+                setIsFriend(fetchedFriends.some(f => String(f.id) === String(loggedInId)));
+
+                if (isOwnProfile) {
+                    const fetchedRequests: User[] = await apiService.get<User[]>(`/users/${id}/friend-requests`, token);
+                    setPendingRequests(fetchedRequests);
+                }
+            } catch (error) {
+                console.error("Could not load friend data", error);
+            }
+        };
+        loadFriendData();
+    }, [apiService, isReady, token, id, user, isOwnProfile, loggedInId]);
 
 
     const handleLogout = (): void => {
@@ -80,6 +104,29 @@ const Profile: React.FC = () => {
             messageApi.open({type: "error", content: "Could not change password."});
         }
     };
+    const handleAddFriend = async () => {
+        try {
+            await apiService.post(`/users/${id}/friend-request`, {}, token);
+            setRequestSent(true);
+            messageApi.open({type: "success", content: "Friend request sent!"});
+        } catch (error) {
+            messageApi.open({type: "error", content: "Could not send friend request."});
+        }
+    };
+
+    const handleAcceptRequest = async (fromId: string) => {
+        try {
+            await apiService.put(`/users/${id}/friend-request/accept`, {fromId: Number(fromId)}, token);
+            messageApi.open({type: "success", content: "Friend request accepted!"});
+            const fetchedFriends: User[] = await apiService.get<User[]>(`/users/${id}/friends`, token);
+            setFriends(fetchedFriends);
+            const fetchedRequests: User[] = await apiService.get<User[]>(`/users/${id}/friend-requests`, token);
+            setPendingRequests(fetchedRequests);
+        } catch (error) {
+            messageApi.open({type: "error", content: "Could not accept friend request."});
+        }
+    };
+
     const handleSaveProfile = async () => {
         try {
             await apiService.put(`/users/${id}/profile`, {
@@ -141,23 +188,35 @@ const Profile: React.FC = () => {
                                     {user.status === "ONLINE" ? "Online" : "Offline"}
                                 </span>
                                 <div style={{color: "#4a5565", marginTop: 8}}>{user.bio}</div>
+                                <div style={{color: "#6b7280", marginTop: 4, fontSize: 13}}>{user.friendCount ?? friends.length} Friends</div>
                             </div>
                         </div>
-                        <Button
-                            type="primary"
-                            onClick={() => router.push(`/users/${id}/transcripts`)}
-                            style={{
-                                background: "linear-gradient(90deg, #4f46e5, #7c3aed)",
-                                border: "none",
-                                borderRadius: 10,
-                                height: 44,
-                                padding: "0 24px",
-                                fontSize: 15,
-                                fontWeight: 500,
-                            }}
-                        >
-                            See latest transcripts/notes
-                        </Button>
+                        <div style={{display: "flex", gap: 12}}>
+                            {!isOwnProfile && !isFriend && !requestSent && (
+                                <Button onClick={handleAddFriend}>+ Add Friend</Button>
+                            )}
+                            {!isOwnProfile && isFriend && (
+                                <Tag color="green" style={{fontSize: 13, padding: "4px 10px"}}>Friends ✓</Tag>
+                            )}
+                            {!isOwnProfile && requestSent && (
+                                <Tag color="blue" style={{fontSize: 13, padding: "4px 10px"}}>Request Sent</Tag>
+                            )}
+                            <Button
+                                type="primary"
+                                onClick={() => router.push(`/users/${id}/transcripts`)}
+                                style={{
+                                    background: "linear-gradient(90deg, #4f46e5, #7c3aed)",
+                                    border: "none",
+                                    borderRadius: 10,
+                                    height: 44,
+                                    padding: "0 24px",
+                                    fontSize: 15,
+                                    fontWeight: 500,
+                                }}
+                            >
+                                See latest transcripts/notes
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
@@ -244,6 +303,57 @@ const Profile: React.FC = () => {
                         </Form>
                     </div>
                 )}
+
+                {isOwnProfile && pendingRequests.length > 0 && (
+                    <div className={profileStyles.card}>
+                        <div style={{fontSize: 24, fontWeight: 600, color: "#101828"}}>Friend Requests ({pendingRequests.length})</div>
+                        <Divider />
+                        <List
+                            dataSource={pendingRequests}
+                            renderItem={(requester) => (
+                                <List.Item
+                                    actions={[
+                                        <Button key="accept" type="primary" size="small" onClick={() => handleAcceptRequest(String(requester.id))}>
+                                            Accept
+                                        </Button>
+                                    ]}
+                                >
+                                    <List.Item.Meta
+                                        avatar={<Avatar className={profileStyles.avatar} style={{cursor: "pointer"}} onClick={() => router.push(`/users/${requester.id}`)}>{requester.username?.slice(0, 2).toUpperCase()}</Avatar>}
+                                        title={<span style={{cursor: "pointer"}} onClick={() => router.push(`/users/${requester.id}`)}>{requester.username}</span>}
+                                        description={requester.bio ?? ""}
+                                    />
+                                </List.Item>
+                            )}
+                        />
+                    </div>
+                )}
+
+                <div className={profileStyles.card}>
+                    <div style={{fontSize: 24, fontWeight: 600, color: "#101828"}}>Friends ({friends.length})</div>
+                    <Divider />
+                    {friends.length === 0 ? (
+                        <div style={{color: "#6b7280"}}>No friends yet.</div>
+                    ) : (
+                        <List
+                            dataSource={friends}
+                            renderItem={(friend) => (
+                                <List.Item style={{cursor: "pointer"}} onClick={() => router.push(`/users/${friend.id}`)}>
+                                    <List.Item.Meta
+                                        avatar={<Avatar className={profileStyles.avatar}>{friend.username?.slice(0, 2).toUpperCase()}</Avatar>}
+                                        title={friend.username}
+                                        description={
+                                            <span>
+                                                {friend.friendCount ?? 0} friends &bull;{" "}
+                                                <Tag color={friend.status === "ONLINE" ? "green" : "default"}>{friend.status}</Tag>
+                                            </span>
+                                        }
+                                    />
+                                </List.Item>
+                            )}
+                        />
+                    )}
+                </div>
 
             </div>
         </div>
