@@ -178,12 +178,20 @@ const HomePage: React.FC = () => {
                                     className={styles.card}
                                     title={<span style={{ color: '#ffffff' }}>{room.name}</span>}
                                     extra={
-                                        <Tag
-                                            color={room.roomStatus === "FULL" ? "red" : "green"}
-                                            style={{ margin: 0 }}
-                                        >
-                                            {room.roomStatus === "EMPTY" ? "0/2" : (room.roomStatus === "JOINABLE" ? "1/2" : "2/2")}
-                                        </Tag>
+                                        <span className={`${styles.roomStatusBadge} ${
+                                            room.roomStatus === "EMPTY" ? styles.roomStatusBadgeEmpty :
+                                            room.roomStatus === "JOINABLE" ? styles.roomStatusBadgeJoinable :
+                                            styles.roomStatusBadgeFull
+                                        }`}>
+                                            <span className={`${styles.statusDot} ${
+                                                room.roomStatus === "EMPTY" ? styles.statusDotEmpty :
+                                                room.roomStatus === "JOINABLE" ? styles.statusDotJoinable :
+                                                styles.statusDotFull
+                                            }`} />
+                                            {room.roomStatus === "EMPTY" ? "Available" :
+                                             room.roomStatus === "JOINABLE" ? "1 Person Waiting" :
+                                             "Full"}
+                                        </span>
                                     }
                                     bordered={false}
                                     styles={{
@@ -193,10 +201,20 @@ const HomePage: React.FC = () => {
                                 >
                                     <Paragraph style={{ color: '#e2e8f0' }}>{room.description}</Paragraph>
 
+                                    <div className={styles.occupancySlots}>
+                                        <div className={`${styles.occupancySlot} ${room.roomStatus !== "EMPTY" ? styles.occupancySlotFilled : styles.occupancySlotEmpty}`}>
+                                            {room.roomStatus !== "EMPTY" ? "👤" : ""}
+                                        </div>
+                                        <div className={`${styles.occupancySlot} ${room.roomStatus === "FULL" ? styles.occupancySlotFilled : styles.occupancySlotEmpty}`}>
+                                            {room.roomStatus === "FULL" ? "👤" : ""}
+                                        </div>
+                                    </div>
+
                                     <Button
                                         type="primary"
                                         disabled={room.roomStatus === "FULL"}
                                         onClick={() => handleJoinRoom(room.id)}
+                                        style={{ marginTop: 12 }}
                                     >
                                         {room.roomStatus === "FULL" ? "Room Full" : "Join Room"}
                                     </Button>

@@ -140,3 +140,83 @@
     gap: 16px;
     margin-top: 16px;
 }
+
+/* Room status badge */
+.roomStatusBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.roomStatusBadgeEmpty {
+    background: rgba(34, 197, 94, 0.15);
+    color: #16a34a;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.roomStatusBadgeJoinable {
+    background: rgba(249, 115, 22, 0.15);
+    color: #ea580c;
+    border: 1px solid rgba(249, 115, 22, 0.35);
+}
+
+.roomStatusBadgeFull {
+    background: rgba(239, 68, 68, 0.15);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.statusDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.statusDotEmpty {
+    background: #22c55e;
+}
+
+.statusDotJoinable {
+    background: #f97316;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.statusDotFull {
+    background: #ef4444;
+}
+
+.occupancySlots {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.occupancySlot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 14px;
+}
+
+.occupancySlotFilled {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.occupancySlotEmpty {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px dashed rgba(255, 255, 255, 0.25);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.4); }
+}
