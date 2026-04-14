@@ -49,7 +49,7 @@ const DocumentViewerPage: React.FC = () => {
     }, [isReady, token, docId, kind, router, apiService]);
 
     const handleLogout = (): void => {
-        apiService.put("/users/logout", null, token);
+        apiService.post("/users/logout", null, token);
         clearToken();
         clearId();
         router.push("/");

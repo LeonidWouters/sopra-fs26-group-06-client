@@ -46,7 +46,7 @@ const TranscriptsPage: React.FC = () => {
     }, [isReady, token, id, router, apiService]);
 
     const handleLogout = (): void => {
-        apiService.put("/users/logout", null, token);
+        apiService.post("/users/logout", null, token);
         clearToken();
         clearId();
         router.push("/");
