@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Card, Button, Typography, message, Tag, ConfigProvider, Modal, Input } from 'antd';
+import { Card, Button, Typography, message, Tag, ConfigProvider, Modal, Input, Alert } from 'antd';
 import Image from 'next/image';
 import styles from "@/styles/mainpage.module.css";
 import { LogoutOutlined, UserOutlined, UsergroupAddOutlined } from '@ant-design/icons';
@@ -30,11 +30,15 @@ const HomePage: React.FC = () => {
     const { token, isReady } = useAuth();
     const [rooms, setRooms] = useState<Room[]>([]);
 
-    // Modal & User States
     const [userId, setUserId] = useState<string | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [privateRoomModalOpen, setPrivateRoomModalOpen] = useState(false);
+    const [inviteUsername, setInviteUsername] = useState("");
+    const [createdRoomId, setCreatedRoomId] = useState<number | null>(null);
+    const [myInvites, setMyInvites] = useState<Room[]>([]);
+
 
     const showModal = () => {
         setIsModalOpen(true);
@@ -84,6 +88,12 @@ const HomePage: React.FC = () => {
                 const fetchedUsers: User[] = await apiService.get<User[]>("/users", token);
                 setUsers((prev) => JSON.stringify(prev) === JSON.stringify(fetchedUsers) ? prev : fetchedUsers);
                 console.log("Fetched users:", fetchedUsers);
+
+                try {
+                    const fetchedInvites: Room[] = await apiService.get<Room[]>(`/users/${parsedId}/invites`, token);
+                    setMyInvites((prev) => JSON.stringify(prev) === JSON.stringify(fetchedInvites) ? prev : fetchedInvites);
+                } catch {}
+
             } catch (error) {
                 console.error("Error fetching data in background:", error);
             }
@@ -108,7 +118,38 @@ const HomePage: React.FC = () => {
             console.error(error);
         }
     };
-
+    const handleCreatePrivateRoom = async () => {
+        try {
+            const newRoom: Room = await apiService.post<Room>("/rooms/private", {}, token);
+            setCreatedRoomId(newRoom.id);
+            setPrivateRoomModalOpen(true);
+            message.success("Private room created!");
+        } catch (error) {
+            message.error("Could not create private room.");
+        }
+    };
+    const handleInvite = async () => {
+        if (!createdRoomId || !inviteUsername.trim()) return;
+        try {
+            await apiService.post(`/rooms/${createdRoomId}/invite`, { username: inviteUsername }, token);
+            message.success(`${inviteUsername} was invited!`);
+            setPrivateRoomModalOpen(false);
+            setInviteUsername("");
+            await apiService.put(`/rooms/${createdRoomId}/join`, null, token);
+            router.push(`/rooms/${createdRoomId}`);
+        } catch (error) {
+            message.error("Could not invite user. Check the username.");
+        }
+    };
+    const handleAcceptInvite = async (roomId: number) => {
+        try {
+            await apiService.put(`/rooms/${roomId}/join`, null, token);
+            message.success("Joined private room!");
+            router.push(`/rooms/${roomId}`);
+        } catch (error) {
+            message.error("Could not join room.");
+        }
+    };
     const { clear: clearToken } = useLocalStorage<string>("token", "");
 
     const handleLogout = (): void => {
@@ -142,6 +183,9 @@ const HomePage: React.FC = () => {
                             onClick={() => router.push(`/users/${userId}`)}>
                         My Profile
                     </Button>
+                    <Button type="default" onClick={handleCreatePrivateRoom}>
+                        + Private Room
+                    </Button>
                     <Button onClick={handleLogout} color="danger" variant="text" icon={<LogoutOutlined/>}>
                         Sign Out
                     </Button>
@@ -150,6 +194,29 @@ const HomePage: React.FC = () => {
 
 
             <div className={styles.mainContent}>
+                {myInvites.length > 0 && (
+                    <div style={{marginBottom: 24}}>
+                        {myInvites.map((invite) => (
+                            <Alert
+                                key={invite.id}
+                                message={`You have been invited to a private room!`}
+                                description={`Room: ${invite.name}`}
+                                type="info"
+                                showIcon
+                                action={
+                                    <Button
+                                        size="small"
+                                        type="primary"
+                                        onClick={() => handleAcceptInvite(invite.id)}
+                                    >
+                                        Join Now
+                                    </Button>
+                                }
+                                style={{marginBottom: 8}}
+                            />
+                        ))}
+                    </div>
+                )}
                 <Title level={2} className={styles.title}>Available Rooms</Title>
                 <Paragraph className={styles.subtitle}>
                     Join a room to start a video call • Maximum 2 people per room
@@ -312,6 +379,26 @@ const HomePage: React.FC = () => {
                                 )}
                             </div>
                         </div>
+                    </Modal>
+                    <Modal
+                        title="Invite a Friend to Your Private Room"
+                        open={privateRoomModalOpen}
+                        onCancel={() => {
+                            setPrivateRoomModalOpen(false);
+                            setInviteUsername("");
+                        }}
+                        onOk={handleInvite}
+                        okText="Invite & Join"
+                    >
+                        <div style={{marginBottom: 16}}>
+                            Room created! Enter the username of the friend you want to invite:
+                        </div>
+                        <Input
+                            placeholder="Username..."
+                            value={inviteUsername}
+                            onChange={(e) => setInviteUsername(e.target.value)}
+                            onPressEnter={handleInvite}
+                        />
                     </Modal>
                 </div>
                 <Paragraph className={styles.userSubtitle}>
