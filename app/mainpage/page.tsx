@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Card, Button, Typography, message, Tag, ConfigProvider, Modal, Input, Alert } from 'antd';
+import { Card, Button, Typography, message, Tag, ConfigProvider, Modal, Input, Alert, Select } from 'antd';
 import Image from 'next/image';
 import styles from "@/styles/mainpage.module.css";
 import { LogoutOutlined, UserOutlined, UsergroupAddOutlined } from '@ant-design/icons';
@@ -34,11 +34,11 @@ const HomePage: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
-    const [privateRoomModalOpen, setPrivateRoomModalOpen] = useState(false);
     const [inviteUsername, setInviteUsername] = useState("");
-    const [createdRoomId, setCreatedRoomId] = useState<number | null>(null);
     const [myInvites, setMyInvites] = useState<Room[]>([]);
-
+    const [createRoomModalOpen, setCreateRoomModalOpen] = useState(false);
+    const [newRoomName, setNewRoomName] = useState("");
+    const [newRoomDesc, setNewRoomDesc] = useState("");
 
     const showModal = () => {
         setIsModalOpen(true);
@@ -118,27 +118,21 @@ const HomePage: React.FC = () => {
             console.error(error);
         }
     };
-    const handleCreatePrivateRoom = async () => {
+    const submitPrivateRoom = async () => {
+        if (!newRoomName || !newRoomDesc || !inviteUsername) return message.error("Please fill in all fields!");
         try {
-            const newRoom: Room = await apiService.post<Room>("/rooms/private", {}, token);
-            setCreatedRoomId(newRoom.id);
-            setPrivateRoomModalOpen(true);
-            message.success("Private room created!");
-        } catch (error) {
-            message.error("Could not create private room.");
-        }
-    };
-    const handleInvite = async () => {
-        if (!createdRoomId || !inviteUsername.trim()) return;
-        try {
-            await apiService.post(`/rooms/${createdRoomId}/invite`, { username: inviteUsername }, token);
-            message.success(`${inviteUsername} was invited!`);
-            setPrivateRoomModalOpen(false);
+            const newRoom = await apiService.post<Room>("/rooms/private", { name: newRoomName, description: newRoomDesc }, token);
+            await apiService.post(`/rooms/${newRoom.id}/invite`, { username: inviteUsername }, token);
+            await apiService.put(`/rooms/${newRoom.id}/join`, null, token);
+
+            message.success("Private Room created!");
+            setCreateRoomModalOpen(false);
+            setNewRoomName("");
+            setNewRoomDesc("");
             setInviteUsername("");
-            await apiService.put(`/rooms/${createdRoomId}/join`, null, token);
-            router.push(`/rooms/${createdRoomId}`);
+            router.push(`/rooms/${newRoom.id}`);
         } catch (error) {
-            message.error("Could not invite user. Check the username.");
+            message.error("Error creating room.");
         }
     };
     const handleAcceptInvite = async (roomId: number) => {
@@ -183,7 +177,7 @@ const HomePage: React.FC = () => {
                             onClick={() => router.push(`/users/${userId}`)}>
                         My Profile
                     </Button>
-                    <Button type="default" onClick={handleCreatePrivateRoom}>
+                    <Button type="default" onClick={() => setCreateRoomModalOpen(true)}>
                         + Private Room
                     </Button>
                     <Button onClick={handleLogout} color="danger" variant="text" icon={<LogoutOutlined/>}>
@@ -381,24 +375,37 @@ const HomePage: React.FC = () => {
                         </div>
                     </Modal>
                     <Modal
-                        title="Invite a Friend to Your Private Room"
-                        open={privateRoomModalOpen}
-                        onCancel={() => {
-                            setPrivateRoomModalOpen(false);
-                            setInviteUsername("");
-                        }}
-                        onOk={handleInvite}
-                        okText="Invite & Join"
+                        title="Create a Private Room"
+                        open={createRoomModalOpen}
+                        onCancel={() => setCreateRoomModalOpen(false)}
+                        onOk={submitPrivateRoom}
+                        okText="Create & Join"
                     >
-                        <div style={{marginBottom: 16}}>
-                            Room created! Enter the username of the friend you want to invite:
-                        </div>
                         <Input
-                            placeholder="Username..."
-                            value={inviteUsername}
-                            onChange={(e) => setInviteUsername(e.target.value)}
-                            onPressEnter={handleInvite}
+                            placeholder="Room Name"
+                            value={newRoomName}
+                            onChange={(e) => setNewRoomName(e.target.value)}
+                            style={{ marginBottom: 12 }}
                         />
+                        <Input.TextArea
+                            placeholder="Room Description"
+                            value={newRoomDesc}
+                            onChange={(e) => setNewRoomDesc(e.target.value)}
+                            style={{ marginBottom: 12 }}
+                        />
+
+                        <div style={{marginBottom: 8}}>Select a friend to invite:</div>
+                        <Select
+                            placeholder="Select Friend"
+                            style={{ width: '100%' }}
+                            onChange={(value) => setInviteUsername(value)}
+                        >
+                            {users.filter(u => u.id && (user?.friends || []).map(String).includes(String(u.id))).map(friend => (
+                                <Select.Option key={friend.username} value={friend.username}>
+                                    {friend.name} (@{friend.username})
+                                </Select.Option>
+                            ))}
+                        </Select>
                     </Modal>
                 </div>
                 <Paragraph className={styles.userSubtitle}>
