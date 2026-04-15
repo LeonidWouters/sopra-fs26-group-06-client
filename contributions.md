@@ -84,9 +84,20 @@ reason).
 
 ---
 
-## Contributions Week 4 - [Begin Date] to [End Date]
+## Contributions Week 4 - 13.04.2026 to 20.04.2026
 
-_Continue with the same table format as above._
+| **Student**        | **Date** | **Link to Commit**                                                    | **Description**                                                                                                                                                                                                                                                               | **Relevance**                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|--------------------|----------|-----------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **@LeonidWouters** | 15.04.26 | https://github.com/LeonidWouters/sopra-fs26-group-06-client/pull/65 & https://github.com/LeonidWouters/sopra-fs26-group-06-server/pull/69   | Bug Fix: Implemented automatic cleanup when a user closes the browser during an active session: the user is logged out, removed from the call correctly, and call artifacts (notes/transcript) are persisted before room state is reset.                                                                    | This improves reliability and data consistency in real user behavior (closing tabs/windows unexpectedly), prevents stuck room participants, and ensures users can still access their notes/transcripts later in their profile. |
+|                    | "Datum" | "Link to PR"   | "Description" | "Relevance"                                                             ||
+| **@username**      | "Datum" | "link to pr"   | "description"                                                | "relevance"                                                                                                                                                                                                                    |
+|                    | "Datum" | "link to pr"   | "description"  | "relevance"                                                                                                                                                                    |
+| **@username**       | "Datum" | "link to pr"   | "description"  | "relevance"|
+|                    | "Datum" | "link to pr"   | "description"  | "relevance"|                                                                                    |
+| **@username**   | "Datum" | "link to pr"   | "description"  | "relevance" |
+|                    | "Datum" | "link to pr"   | "description"  | "relevance"                                                                                                                                                                                                                                                                    |
+| **@username**      | "Datum" | "link to pr"   | "description"  | "relevance"                                                                                                                                                                             |
+|                    | "Datum" | "link to pr"   | "description"  | "relevance"                                                                                                                                                                                                              |
 
 ---
 
