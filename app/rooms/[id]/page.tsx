@@ -14,6 +14,22 @@ import {CloseCircleOutlined} from "@ant-design/icons";
 import {isProduction} from "@/utils/environment";
 import {getApiDomain} from "@/utils/domain";
 
+type SpeechRecognitionLike = {
+    continuous: boolean;
+    interimResults: boolean;
+    start: () => void;
+    stop: () => void;
+    onresult: ((event: SpeechRecognitionEvent) => void) | null;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+declare global {
+    interface Window {
+        SpeechRecognition?: SpeechRecognitionConstructor;
+        webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    }
+}
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), {ssr: false});
 
@@ -35,6 +51,8 @@ const RoomPage: React.FC = () => {
     const remoteRef = useRef<HTMLVideoElement>(null);
     const wsRef = useRef<WebSocket>(null);
     const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+    const localStreamRef = useRef<MediaStream | null>(null);
+    const localStreamAcquirePromiseRef = useRef<Promise<MediaStream | null> | null>(null);
     const [messages, setMessages] = useState<textMsg[]>([]);
     const [transcriptChunks, setTranscriptChunks] = useState<string[]>([]);
     const [markdownText, setMarkdownText] = useState<string>("");
@@ -45,10 +63,15 @@ const RoomPage: React.FC = () => {
     const [roomName, setRoomName] = useState<string>("Loading...");
     const [occupancy, setOccupancy] = useState<number>(0);
     const [callStarted, setCallStarted] = useState<boolean>(false);
+    const [isCaller, setIsCaller] = useState<boolean>(false);
+    const [socketReady, setSocketReady] = useState<boolean>(false);
+    const [joinedSocketRoom, setJoinedSocketRoom] = useState<boolean>(false);
+    const [peerInSocketRoom, setPeerInSocketRoom] = useState<boolean>(false);
+    const [localStreamReady, setLocalStreamReady] = useState<boolean>(false);
     const [disabilityStatusLocal, setDisabilityStatusLocal] = useState<string>("");
     const [disabilityStatusRemote, setDisabilityStatusRemote] = useState<string>("");
     const [subtitleText, setSubtitleText] = useState<string>("");
-    const speechRef = useRef<SpeechRecognition>(null);
+    const speechRef = useRef<SpeechRecognitionLike | null>(null);
     const ttsEnabledRef = useRef<boolean>(false);
     const callSessionIdRef = useRef<string>("");
     const artifactsFlushedRef = useRef<boolean>(false);
@@ -56,6 +79,7 @@ const RoomPage: React.FC = () => {
     const latestMessagesRef = useRef<textMsg[]>([]);
     const latestTranscriptChunksRef = useRef<string[]>([]);
     const latestCallStartedRef = useRef<boolean>(false);
+    const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
     const [chat, setChat] = useState<boolean>(false);
     const [chatHistory,setChatHistory] = useState(false);
 
@@ -152,12 +176,115 @@ const RoomPage: React.FC = () => {
     };
 
     const leaveRoom = async (): Promise<void> => {
-        peerConnectionRef.current?.close();
-        peerConnectionRef.current = null;
+        resetPeerConnection();
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({type: "leave"}));
+        }
+        wsRef.current?.close(1000, "left room");
+        wsRef.current = null;
+        setSocketReady(false);
+        setJoinedSocketRoom(false);
+        setPeerInSocketRoom(false);
 
         await flushCallArtifacts();
         await apiService.put(`/rooms/${id}/leave`, null, token);
         router.push("/mainpage");
+    };
+
+    const resetPeerConnection = () => {
+        peerConnectionRef.current?.close();
+        peerConnectionRef.current = null;
+        pendingIceCandidatesRef.current = [];
+        if (remoteRef.current) {
+            remoteRef.current.srcObject = null;
+        }
+    };
+
+    const stopLocalStream = () => {
+        localStreamRef.current?.getTracks().forEach(track => track.stop());
+        localStreamRef.current = null;
+        localStreamAcquirePromiseRef.current = null;
+        if (clientRef.current) {
+            clientRef.current.srcObject = null;
+        }
+        setLocalStreamReady(false);
+    };
+
+    const attachLocalTracks = (session: RTCPeerConnection, stream: MediaStream) => {
+        const existingTrackIds = new Set(
+            session.getSenders()
+                .map(sender => sender.track?.id)
+                .filter((id): id is string => Boolean(id)),
+        );
+
+        stream.getTracks().forEach(track => {
+            if (!existingTrackIds.has(track.id)) {
+                session.addTrack(track, stream);
+            }
+        });
+    };
+
+    const ensureLocalStream = async (): Promise<MediaStream | null> => {
+        const existingStream = localStreamRef.current || clientRef.current?.srcObject as MediaStream | null;
+        if (existingStream) {
+            localStreamRef.current = existingStream;
+            setLocalStreamReady(true);
+            return existingStream;
+        }
+
+        if (localStreamAcquirePromiseRef.current) {
+            return await localStreamAcquirePromiseRef.current;
+        }
+
+        const acquirePromise = (async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+                localStreamRef.current = stream;
+                if (clientRef.current) {
+                    clientRef.current.srcObject = stream;
+                }
+                setLocalStreamReady(true);
+                return stream;
+            } catch (error) {
+                console.error("Error accessing media devices.", error);
+                setLocalStreamReady(false);
+                return null;
+            } finally {
+                localStreamAcquirePromiseRef.current = null;
+            }
+        })();
+
+        localStreamAcquirePromiseRef.current = acquirePromise;
+        return await acquirePromise;
+    };
+
+    const flushPendingIceCandidates = async (session: RTCPeerConnection) => {
+        const queuedCandidates = [...pendingIceCandidatesRef.current];
+        pendingIceCandidatesRef.current = [];
+
+        for (const candidate of queuedCandidates) {
+            try {
+                await session.addIceCandidate(candidate);
+            }
+            catch (error) {
+                console.error("Could not add queued ICE candidate:", error);
+            }
+        }
+    };
+
+    const handleIncomingIceCandidate = async (candidate: RTCIceCandidateInit) => {
+        const session = peerConnectionRef.current;
+        if (!session || !session.remoteDescription) {
+            pendingIceCandidatesRef.current.push(candidate);
+            return;
+        }
+
+        try {
+            await session.addIceCandidate(candidate);
+        }
+        catch (error) {
+            console.error("Could not add ICE candidate:", error);
+        }
     };
 
     useEffect(() => {
@@ -208,6 +335,7 @@ const RoomPage: React.FC = () => {
                 if (room.CallerID) count++;
                 if (room.CalleeID) count++;
                 setOccupancy(count);
+                setIsCaller(String(room.CallerID) === String(myUserId));
 
                 const users: string[] = [];
                 let myName = "";
@@ -262,12 +390,21 @@ const RoomPage: React.FC = () => {
     useEffect(() => {
         if (occupancy === 2) {
             setCallStarted(true);
-
-            if (!peerConnectionRef.current) {
-                startCall();
-            }
+        }
+        else {
+            setPeerInSocketRoom(false);
+            resetPeerConnection();
         }
     }, [occupancy]);
+
+    useEffect(() => {
+        if (occupancy !== 2 || !isCaller || !socketReady || !joinedSocketRoom || !peerInSocketRoom || !localStreamReady) {
+            return;
+        }
+        if (!peerConnectionRef.current) {
+            void startCall();
+        }
+    }, [occupancy, isCaller, socketReady, joinedSocketRoom, peerInSocketRoom, localStreamReady]);
 
     useEffect(() => {
         if (!isReady) return;
@@ -277,21 +414,41 @@ const RoomPage: React.FC = () => {
         wsRef.current = socket;
 
         socket.onopen = () => {
+            setSocketReady(true);
+            setJoinedSocketRoom(false);
+            setPeerInSocketRoom(false);
             socket.send(JSON.stringify({id}));
         }
         socket.onmessage = async (event) => {
             const message = JSON.parse(event.data);
+
+            if (message.type === "joined") {
+                setJoinedSocketRoom(true);
+            }
+
+            if (message.type === "peer-joined") {
+                setPeerInSocketRoom(true);
+            }
+
+            if (message.type === "peer-left") {
+                setPeerInSocketRoom(false);
+                resetPeerConnection();
+            }
 
             if (message.type === "offer") {
                 await answerCall(message.offer);
             }
 
             if (message.type === "answer") {
-                await peerConnectionRef.current?.setRemoteDescription(message.answer);
+                const session = peerConnectionRef.current;
+                if (session) {
+                    await session.setRemoteDescription(message.answer);
+                    await flushPendingIceCandidates(session);
+                }
             }
 
             if (message.type === "ice-candidate") {
-                await peerConnectionRef.current?.addIceCandidate(message.candidate);
+                await handleIncomingIceCandidate(message.candidate);
             }
 
             if (message.type === "markdown-update") {
@@ -315,11 +472,21 @@ const RoomPage: React.FC = () => {
             }
         };
 
+        socket.onclose = () => {
+            setSocketReady(false);
+            setJoinedSocketRoom(false);
+            setPeerInSocketRoom(false);
+            resetPeerConnection();
+        };
+
         socket.onerror = (err) => {
             console.error("WebSocket error:", err);
         };
 
         return () => {
+            setSocketReady(false);
+            setJoinedSocketRoom(false);
+            setPeerInSocketRoom(false);
             socket.close(1000, "component unmounted");
         };
     }, [apiService, token, isReady]);
@@ -354,13 +521,16 @@ const RoomPage: React.FC = () => {
 
 
     const setupPeerConnection = () => {
+        if (peerConnectionRef.current) {
+            return peerConnectionRef.current;
+        }
 
         const session = new RTCPeerConnection(); //start
         peerConnectionRef.current = session;
 
         const ownStream = clientRef.current?.srcObject as MediaStream | null;  //kamera added
         if (ownStream) {
-            ownStream.getTracks().forEach(track => session.addTrack(track, ownStream));
+            attachLocalTracks(session, ownStream);
         }
 
         session.ontrack = (event) => { //partner video
@@ -370,7 +540,7 @@ const RoomPage: React.FC = () => {
         };
 
         session.onicecandidate = (event) => { //transfer zu websocket
-            if (event.candidate && wsRef.current) {
+            if (event.candidate && wsRef.current?.readyState === WebSocket.OPEN) {
                 wsRef.current.send(JSON.stringify({
                     type: "ice-candidate",
                     candidate: event.candidate
@@ -383,7 +553,25 @@ const RoomPage: React.FC = () => {
 
 
     const startCall = async () => {
+        if (wsRef.current?.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        if (!peerInSocketRoom) {
+            return;
+        }
+
+        const ownStream = await ensureLocalStream();
+        if (!ownStream) {
+            return;
+        }
+
         const session = setupPeerConnection();
+        attachLocalTracks(session, ownStream);
+
+        if (session.signalingState !== "stable") {
+            return;
+        }
 
         const offer = await session.createOffer();
         await session.setLocalDescription(offer);
@@ -394,9 +582,30 @@ const RoomPage: React.FC = () => {
         }));
     };
     const answerCall = async (offer: RTCSessionDescriptionInit) => {
+        if (wsRef.current?.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        const ownStream = await ensureLocalStream();
+        if (!ownStream) {
+            return;
+        }
+
         const session = setupPeerConnection();
+        attachLocalTracks(session, ownStream);
+
+        if (session.signalingState !== "stable") {
+            try {
+                await session.setLocalDescription({type: "rollback"});
+            }
+            catch {
+                resetPeerConnection();
+                return;
+            }
+        }
 
         await session.setRemoteDescription(offer);
+        await flushPendingIceCandidates(session);
 
         const answer = await session.createAnswer();
         await session.setLocalDescription(answer);
@@ -433,13 +642,18 @@ const RoomPage: React.FC = () => {
             speechRef.current.stop();
         }
 
+        const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognitionCtor) {
+            console.error("SpeechRecognition is not supported by this browser.");
+            return;
+        }
 
-        speechRef.current = new window.SpeechRecognition();
+        speechRef.current = new SpeechRecognitionCtor();
         speechRef.current.continuous = true;
         speechRef.current.interimResults = true;
         speechRef.current.start();
 
-        speechRef.current.onresult = event => {
+        speechRef.current.onresult = (event: SpeechRecognitionEvent) => {
             let message = "";
             console.log(event.results);
             for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -520,22 +734,15 @@ const RoomPage: React.FC = () => {
 
     useEffect(() => {
         if (!isReady) return; //ensure token is loaded
-        let stream: MediaStream | null;
         const startMediaDevice = async () => {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-                clientRef.current!.srcObject = stream;
-            } catch (error) {
-                console.error("Error accessing media devices.", error);
+            const stream = await ensureLocalStream();
+            if (stream && peerConnectionRef.current) {
+                attachLocalTracks(peerConnectionRef.current, stream);
             }
         }
-        startMediaDevice();
+        void startMediaDevice();
         return () => {
-            stream?.getTracks().forEach(track => track.stop());
-            if (clientRef.current) {
-                clientRef.current.srcObject = null
-            }
-            ;
+            stopLocalStream();
         }
     }, [apiService, token, isReady]);
 
