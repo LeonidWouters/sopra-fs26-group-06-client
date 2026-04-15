@@ -36,6 +36,7 @@ const RoomPage: React.FC = () => {
     const wsRef = useRef<WebSocket>(null);
     const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
     const [messages, setMessages] = useState<textMsg[]>([]);
+    const [transcriptChunks, setTranscriptChunks] = useState<string[]>([]);
     const [markdownText, setMarkdownText] = useState<string>("");
     const [activeEditor, setActiveEditor] = useState<string>("Loading...");
     const [participants, setParticipants] = useState<string[]>(["Loading...", "Waiting..."]);
@@ -49,6 +50,12 @@ const RoomPage: React.FC = () => {
     const [subtitleText, setSubtitleText] = useState<string>("");
     const speechRef = useRef<SpeechRecognition>(null);
     const ttsEnabledRef = useRef<boolean>(false);
+    const callSessionIdRef = useRef<string>("");
+    const artifactsFlushedRef = useRef<boolean>(false);
+    const latestMarkdownRef = useRef<string>("");
+    const latestMessagesRef = useRef<textMsg[]>([]);
+    const latestTranscriptChunksRef = useRef<string[]>([]);
+    const latestCallStartedRef = useRef<boolean>(false);
     const [chat, setChat] = useState<boolean>(false);
     const [chatHistory,setChatHistory] = useState(false);
 
@@ -58,25 +65,132 @@ const RoomPage: React.FC = () => {
         timestamp: string;
     }
 
+    const getOrCreateSessionId = (): string => {
+        if (!callSessionIdRef.current) {
+            callSessionIdRef.current = crypto.randomUUID();
+        }
+        return callSessionIdRef.current;
+    };
+
+    const buildTranscriptContent = (chatMessages: textMsg[], speechChunks: string[]): string => {
+        const chatLines = chatMessages
+            .filter((msg) => msg.message?.trim())
+            .map((msg) => `${msg.timestamp} ${msg.client ? "Me" : "Peer"}: ${msg.message}`);
+
+        const speechLines = speechChunks
+            .filter((chunk) => chunk?.trim())
+            .map((chunk) => `Speech: ${chunk}`);
+
+        return [...chatLines, ...speechLines].join("\n");
+    };
+
+    const flushCallArtifacts = async (): Promise<void> => {
+        if (artifactsFlushedRef.current || !callStarted) {
+            return;
+        }
+
+        const noteContent = markdownText.trim();
+        const transcriptContent = buildTranscriptContent(messages, transcriptChunks).trim();
+        if (!noteContent && !transcriptContent) {
+            return;
+        }
+
+        const sessionId = getOrCreateSessionId();
+
+        try {
+            if (noteContent) {
+                await apiService.post("/notes", {
+                    content: noteContent,
+                    sessionId,
+                }, token);
+            }
+
+            if (transcriptContent) {
+                await apiService.post("/transcripts", {
+                    content: transcriptContent,
+                    sessionId,
+                }, token);
+            }
+
+            artifactsFlushedRef.current = true;
+        }
+        catch (error) {
+            console.error("Could not flush call artifacts:", error);
+        }
+    };
+
+    const flushCallArtifactsWithBeacon = (): void => {
+        if (artifactsFlushedRef.current || !latestCallStartedRef.current || !token || !id) {
+            return;
+        }
+
+        const noteContent = latestMarkdownRef.current.trim();
+        const transcriptContent = buildTranscriptContent(latestMessagesRef.current, latestTranscriptChunksRef.current).trim();
+        if (!noteContent && !transcriptContent) {
+            return;
+        }
+
+        const sessionId = getOrCreateSessionId();
+        const encodedToken = encodeURIComponent(token);
+        const baseUrl = apiService.getBaseURL();
+
+        if (noteContent) {
+            navigator.sendBeacon(
+                `${baseUrl}/notes?token=${encodedToken}`,
+                new Blob([JSON.stringify({content: noteContent, sessionId})], {type: "application/json"}),
+            );
+        }
+
+        if (transcriptContent) {
+            navigator.sendBeacon(
+                `${baseUrl}/transcripts?token=${encodedToken}`,
+                new Blob([JSON.stringify({content: transcriptContent, sessionId})], {type: "application/json"}),
+            );
+        }
+
+        artifactsFlushedRef.current = true;
+    };
+
     const leaveRoom = async (): Promise<void> => {
         peerConnectionRef.current?.close();
         peerConnectionRef.current = null;
 
-        if (markdownText.trim() !== "" && callStarted) {
-            try {
-                const sessionId = crypto.randomUUID();
-                await apiService.post("/notes", {
-                    content: markdownText,
-                    sessionId: sessionId
-                }, token);
-
-            } catch (error) {
-                console.error("Couldnt save notes:", error);
-            }
-        }
+        await flushCallArtifacts();
         await apiService.put(`/rooms/${id}/leave`, null, token);
         router.push("/mainpage");
     };
+
+    useEffect(() => {
+        latestMarkdownRef.current = markdownText;
+    }, [markdownText]);
+
+    useEffect(() => {
+        latestMessagesRef.current = messages;
+    }, [messages]);
+
+    useEffect(() => {
+        latestTranscriptChunksRef.current = transcriptChunks;
+    }, [transcriptChunks]);
+
+    useEffect(() => {
+        latestCallStartedRef.current = callStarted;
+    }, [callStarted]);
+
+    useEffect(() => {
+        if (!isReady) return;
+
+        const handlePageExit = () => {
+            // Logout beacon is emitted by useAuth; server-side logout now persists call artifacts.
+        };
+
+        window.addEventListener("beforeunload", handlePageExit);
+        window.addEventListener("pagehide", handlePageExit);
+
+        return () => {
+            window.removeEventListener("beforeunload", handlePageExit);
+            window.removeEventListener("pagehide", handlePageExit);
+        };
+    }, [isReady, token, id, apiService]);
 
     useEffect(() => {
         if (isReady && !token) router.push("/login");
@@ -197,6 +311,7 @@ const RoomPage: React.FC = () => {
 
             if (message.type === "speech-to-text") {
                 setSubtitleText(message.content);
+                setTranscriptChunks((chunks) => [...chunks, message.content]);
             }
         };
 
