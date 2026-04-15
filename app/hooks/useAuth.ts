@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import apiService from "@/api/apiService";
 
 export const useAuth = () => {
-  const { value: token, setValue } = useLocalStorage<string>("token", "");
+  const { value: token, set: setToken } = useLocalStorage<string>("token", "");
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -14,6 +14,9 @@ export const useAuth = () => {
         const url = `${apiService.getBaseURL()}/users/logout?token=${token}`;
         navigator.sendBeacon(url);
       }
+
+      globalThis.localStorage.removeItem("token");
+      globalThis.localStorage.removeItem("id");
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -26,7 +29,8 @@ export const useAuth = () => {
   const logout = () => {
     if (token) {
       apiService.post("/users/logout", null, token).then(() => {
-        setValue("");
+        setToken("");
+        globalThis.localStorage.removeItem("id");
       });
     }
   };
