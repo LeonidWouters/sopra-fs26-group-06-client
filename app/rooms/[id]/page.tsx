@@ -82,6 +82,7 @@ const RoomPage: React.FC = () => {
     const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
     const [chat, setChat] = useState<boolean>(false);
     const [chatHistory,setChatHistory] = useState(false);
+    const [form] = Form.useForm();
 
     interface textMsg {
         message: string;
@@ -870,12 +871,12 @@ const RoomPage: React.FC = () => {
                     </div>
 
                     <div style={{padding: "12px 24px", borderTop: "1px solid #e5e7eb"}}>
-                        <Form onFinish={(values) => sendText(values.message)} layout="inline">
+                        <Form form = {form} onFinish={(values) => sendText(values.message)} layout="inline">
                             <Form.Item name="message" style={{flex: 1, marginBottom: 0}} hidden={!chat}>
-                                <Input placeholder="Type a message..."/>
-                            </Form.Item>
-                            <Form.Item style={{marginBottom: 0}} hidden={!chat}>
-                                <Button htmlType="submit" type="primary" >Send</Button>
+                                <Input placeholder="Press enter to submit" onPressEnter={() => {
+                                    form.submit();
+                                    form.resetFields();
+                                }}/>
                             </Form.Item>
                         </Form>
                         <Button type ="default" onClick={loadChat}>show chat history</Button>
