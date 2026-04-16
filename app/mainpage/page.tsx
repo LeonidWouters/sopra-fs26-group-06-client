@@ -112,7 +112,7 @@ const HomePage: React.FC = () => {
     const { clear: clearToken } = useLocalStorage<string>("token", "");
 
     const handleLogout = (): void => {
-        apiService.post("/users/logout", null, token);
+        apiService.put("/users/logout", null, token);
         clearToken();
         globalThis.localStorage.removeItem("id");
         router.push("/");

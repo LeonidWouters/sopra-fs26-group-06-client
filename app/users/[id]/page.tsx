@@ -59,7 +59,7 @@ const Profile: React.FC = () => {
 
 
     const handleLogout = (): void => {
-        apiService.post("/users/logout", null, token);
+        apiService.put("/users/logout", null, token);
         clearToken();
         clearId();
         router.push("/");
@@ -72,7 +72,7 @@ const Profile: React.FC = () => {
         }
         try {
             await apiService.put<User>(`/users/${id}/password`, {password: values.password}, token);
-            await apiService.post("/users/logout", null, token);
+            await apiService.put("/users/logout", null, token);
             clearToken();
             clearId();
             router.push("/");

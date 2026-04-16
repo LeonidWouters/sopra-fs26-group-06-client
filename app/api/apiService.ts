@@ -13,10 +13,6 @@ class ApiService {
     };
   }
 
-  public getBaseURL(): string {
-    return this.baseURL;
-  }
-
   /**
    * Helper function to check the response, parse JSON,
    * and throw an error if the response is not OK.
@@ -147,5 +143,4 @@ class ApiService {
   }
 }
 
-const apiService = new ApiService();
-export default apiService;
+export default ApiService;
