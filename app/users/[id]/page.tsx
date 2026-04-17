@@ -1,5 +1,5 @@
 "use client";
-import {Avatar, Button, Form, Input, Radio, message} from "antd";
+import {Button, Form, Input, Radio, message} from "antd";
 import React, {useEffect, useState} from "react";
 import {useParams, useRouter} from "next/navigation";
 import {useApi} from "@/hooks/useApi";
@@ -127,16 +127,21 @@ const Profile: React.FC = () => {
                 <div className={profileStyles.card}>
                     <div style={{display: "flex", alignItems: "center", justifyContent: "space-between"}}>
                         <div style={{display: "flex", alignItems: "center", gap: 24}}>
-                            <Avatar
-                                size={88}
-                                className={profileStyles.avatar}
-                                style={{
-                                    backgroundColor: getAvatarColor(user.username ?? ""),
-                                    color: "#fff",
-                                }}
-                            >
+                            <div style={{
+                                width: 88,
+                                height: 88,
+                                borderRadius: "50%",
+                                backgroundColor: getAvatarColor(user.username ?? ""),
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 28,
+                                fontWeight: 700,
+                                color: "#fff",
+                                flexShrink: 0,
+                            }}>
                                 {getAvatarInitials(user.username ?? "")}
-                            </Avatar>
+                            </div>
                             <div>
                                 <div style={{fontSize: 30, fontWeight: 600}}>{user.username}</div>
                                 <span style={{
