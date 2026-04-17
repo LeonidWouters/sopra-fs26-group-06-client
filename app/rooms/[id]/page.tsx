@@ -2,7 +2,7 @@
 
 import React, {useEffect, useRef, useState} from 'react';
 import {useParams, useRouter} from 'next/navigation';
-import {Button, Form, Input, Segmented, Spin,Drawer} from "antd";
+import {Button, Form, Input, Segmented, Spin, Drawer, message} from "antd";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
@@ -11,7 +11,6 @@ import {User} from "@/types/user";
 import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
 import {CloseCircleOutlined} from "@ant-design/icons";
-import {isProduction} from "@/utils/environment";
 import {getApiDomain} from "@/utils/domain";
 
 
@@ -80,7 +79,7 @@ const RoomPage: React.FC = () => {
     };
 
     useEffect(() => {
-        if (isReady && !token) router.push("/login");
+        if (isReady && !token) router.push("");
     }, [isReady, token]);
 
     useEffect(() => {
@@ -162,7 +161,6 @@ const RoomPage: React.FC = () => {
 
 
         wsRef.current = socket;
-
         socket.onopen = () => {
             socket.send(JSON.stringify({id}));
         }
@@ -192,7 +190,13 @@ const RoomPage: React.FC = () => {
             if (message.type === "text-msg") {
                 setMessages((messages) => [...messages, message.content]);
                 if (ttsEnabledRef.current) {
-                    window.speechSynthesis.speak(new SpeechSynthesisUtterance(message.content.message));
+                    const voices = window.speechSynthesis.getVoices();
+                    const utterance = new SpeechSynthesisUtterance(message.content.message)
+                    utterance.voice = voices[0]; // select fixed voice, user changeable as a feature enhancement
+                    window.speechSynthesis.speak(utterance);
+                }
+                if (chat){
+                    setSubtitleText(message.content.message);
                 }
             }
 
@@ -211,6 +215,7 @@ const RoomPage: React.FC = () => {
     }, [apiService, token, isReady]);
 
     const sendText = (data:string) => {
+        console.log(data);
         const remoteMessage : textMsg = {
             message : data,
             client: false,
@@ -250,6 +255,7 @@ const RoomPage: React.FC = () => {
         }
 
         session.ontrack = (event) => { //partner video
+            console.log(event.type);
             if (remoteRef.current) {
                 remoteRef.current.srcObject = event.streams[0];
             }
@@ -269,6 +275,7 @@ const RoomPage: React.FC = () => {
 
 
     const startCall = async () => {
+        console.log("Starting call");
         const session = setupPeerConnection();
 
         const offer = await session.createOffer();
@@ -315,15 +322,22 @@ const RoomPage: React.FC = () => {
     }
 
     function startSTT() {
-        if(speechRef.current){
+        if (speechRef.current) {
             speechRef.current.stop();
         }
+        let sentence = "";
 
+        speechRef.current = new SpeechRecognition() || new window.webkitSpeechRecognition; //get speech recognition object based on browser
 
-        speechRef.current = new window.SpeechRecognition();
+        if (!speechRef.current) {
+            setSubtitleText("Speech recognition not supported in this browser, activating text to text chat");
+            setChat(true);
+            return;
+        }
         speechRef.current.continuous = true;
         speechRef.current.interimResults = true;
         speechRef.current.start();
+        console.log(speechRef.current);
 
         speechRef.current.onresult = event => {
             let message = "";
@@ -333,7 +347,7 @@ const RoomPage: React.FC = () => {
 
                 if (event.results[i].isFinal) {
                     console.log("Final transcript:", message);
-
+                    sentence += message;
                     if (wsRef.current?.readyState === WebSocket.OPEN) {
                         wsRef.current.send(JSON.stringify({
                             type: "speech-to-text",
@@ -344,12 +358,24 @@ const RoomPage: React.FC = () => {
             }
         };
 
-        const stopSpeechRecognition = () => {
-            if (speechRef.current) {
-                speechRef.current.stop();
-            }
+        speechRef.current.onaudioend = () => {//after pause in speech, send message to be appended in chat for later lookup
+                sendText(sentence);
         }
-        return stopSpeechRecognition;
+
+        speechRef.current.onend = () => {
+            if(speechRef.current == null){
+                startSTT();
+            }
+            else {
+                setTimeout((speechRef) => speechRef.current.start(), 1000);
+            }
+
+        }
+
+        speechRef.current.onerror = () => {
+            startSTT();
+        }
+
     }
 
 
@@ -387,13 +413,10 @@ const RoomPage: React.FC = () => {
             if (disabilityStatusRemote == "DEAF" && disabilityStatusLocal == "HEARING") {
                 console.log("STT")
                 startSTT();
+                startTTS();
             }
             if (disabilityStatusLocal == "HEARING" && disabilityStatusRemote == "HEARING") {
                 console.log("do nothing")
-            }
-            if (disabilityStatusRemote == "DEAF" && disabilityStatusLocal == "HEARING") {
-                console.log("TTS")
-                startTTS();
             }
             if (disabilityStatusLocal == "DEAF" && disabilityStatusRemote == "HEARING") {
                 console.log("chat for deaf")
@@ -549,12 +572,12 @@ const RoomPage: React.FC = () => {
                     </div>
 
                     <div style={{padding: "12px 24px", borderTop: "1px solid #e5e7eb"}}>
-                        <Form form = {form} onFinish={(values) => sendText(values.message)} layout="inline">
+                        <Form form = {form} onFinish={(values) => {
+                            sendText(values.message);
+                            form.resetFields();
+                        }} layout="inline">
                             <Form.Item name="message" style={{flex: 1, marginBottom: 0}} hidden={!chat}>
-                                <Input placeholder="Press enter to submit" onPressEnter={() => {
-                                    form.submit();
-                                    form.resetFields();
-                                }}/>
+                                <Input placeholder="Press enter to submit" />
                             </Form.Item>
                         </Form>
                         <Button type ="default" onClick={loadChat}>show chat history</Button>
