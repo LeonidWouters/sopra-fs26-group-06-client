@@ -161,7 +161,6 @@ const RoomPage: React.FC = () => {
 
 
         wsRef.current = socket;
-
         socket.onopen = () => {
             socket.send(JSON.stringify({id}));
         }
@@ -326,7 +325,7 @@ const RoomPage: React.FC = () => {
         if (speechRef.current) {
             speechRef.current.stop();
         }
-
+        let sentence = "";
 
         speechRef.current = new SpeechRecognition() || new window.webkitSpeechRecognition; //get speech recognition object based on browser
 
@@ -348,7 +347,7 @@ const RoomPage: React.FC = () => {
 
                 if (event.results[i].isFinal) {
                     console.log("Final transcript:", message);
-
+                    sentence += message;
                     if (wsRef.current?.readyState === WebSocket.OPEN) {
                         wsRef.current.send(JSON.stringify({
                             type: "speech-to-text",
@@ -359,13 +358,22 @@ const RoomPage: React.FC = () => {
             }
         };
 
+        speechRef.current.onaudioend = () => {//after pause in speech, send message to be appended in chat for later lookup
+                sendText(sentence);
+        }
+
         speechRef.current.onend = () => {
-            if(speechRef.current){
-                speechRef.current.start();
+            if(speechRef.current == null){
+                startSTT();
             }
             else {
-                startSTT();//restart clean in case of speechRef being hard reset
+                setTimeout((speechRef) => speechRef.current.start(), 1000);
             }
+
+        }
+
+        speechRef.current.onerror = () => {
+            startSTT();
         }
 
     }
