@@ -611,6 +611,7 @@ const RoomPage: React.FC = () => {
                     </div>
 
                     <div data-color-mode="light" style={{flex: 1}}>
+                        {activeEditor === myUsername?(
                         <MDEditor
                             value={markdownText}
                             onChange={(value: string | undefined) => {
@@ -621,11 +622,13 @@ const RoomPage: React.FC = () => {
                                 }
                             }}
                             height={600}
-                            preview={activeEditor === myUsername ? "live" : "preview"}
                             textareaProps={{
                                 placeholder: "# Shared notes\n\nHere you can collaboratively edit notes..."
                             }}
-                        />
+                        />) : (
+                            <MDEditor hideToolbar={true} value = {markdownText} preview={"preview"} height={600}/>
+                            )
+                        }
                     </div>
                 </div>
 
