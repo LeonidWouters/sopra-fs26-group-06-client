@@ -8,6 +8,7 @@ import useLocalStorage from "@/hooks/useLocalStorage";
 import {useAuth} from "@/hooks/useAuth";
 import mainStyles from "@/styles/mainpage.module.css";
 import profileStyles from "@/styles/profile.module.css";
+import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 import {LogoutOutlined} from "@ant-design/icons";
 import Image from "next/image";
 import {PasswordInput} from "antd-password-input-strength";
@@ -126,8 +127,15 @@ const Profile: React.FC = () => {
                 <div className={profileStyles.card}>
                     <div style={{display: "flex", alignItems: "center", justifyContent: "space-between"}}>
                         <div style={{display: "flex", alignItems: "center", gap: 24}}>
-                            <Avatar size={88} className={profileStyles.avatar}>
-                                {user.username ? user.username.slice(0, 2).toUpperCase() : "?"}
+                            <Avatar
+                                size={88}
+                                className={profileStyles.avatar}
+                                style={{
+                                    backgroundColor: getAvatarColor(user.username ?? ""),
+                                    color: "#fff",
+                                }}
+                            >
+                                {getAvatarInitials(user.username ?? "")}
                             </Avatar>
                             <div>
                                 <div style={{fontSize: 30, fontWeight: 600}}>{user.username}</div>
