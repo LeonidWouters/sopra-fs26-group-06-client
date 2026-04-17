@@ -323,15 +323,22 @@ const RoomPage: React.FC = () => {
     }
 
     function startSTT() {
-        if(speechRef.current){
+        if (speechRef.current) {
             speechRef.current.stop();
         }
 
 
-        speechRef.current = new window.SpeechRecognition();
+        speechRef.current = new SpeechRecognition() || new window.webkitSpeechRecognition; //get speech recognition object based on browser
+
+        if (!speechRef.current) {
+            setSubtitleText("Speech recognition not supported in this browser, activating text to text chat");
+            setChat(true);
+            return;
+        }
         speechRef.current.continuous = true;
         speechRef.current.interimResults = true;
         speechRef.current.start();
+        console.log(speechRef.current);
 
         speechRef.current.onresult = event => {
             let message = "";
@@ -357,7 +364,7 @@ const RoomPage: React.FC = () => {
                 speechRef.current.start();
             }
             else {
-                startTTS();//restart clean in case of speechRef being hard reset
+                startSTT();//restart clean in case of speechRef being hard reset
             }
         }
 
@@ -398,13 +405,10 @@ const RoomPage: React.FC = () => {
             if (disabilityStatusRemote == "DEAF" && disabilityStatusLocal == "HEARING") {
                 console.log("STT")
                 startSTT();
+                startTTS();
             }
             if (disabilityStatusLocal == "HEARING" && disabilityStatusRemote == "HEARING") {
                 console.log("do nothing")
-            }
-            if (disabilityStatusRemote == "DEAF" && disabilityStatusLocal == "HEARING") {
-                console.log("TTS")
-                startTTS();
             }
             if (disabilityStatusLocal == "DEAF" && disabilityStatusRemote == "HEARING") {
                 console.log("chat for deaf")
