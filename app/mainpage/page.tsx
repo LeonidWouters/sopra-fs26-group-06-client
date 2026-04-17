@@ -10,6 +10,7 @@ import { User } from "@/types/user";
 import { useApi } from "@/hooks/useApi";
 import { useAuth } from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
+import { getAvatarColor, getAvatarInitials } from "@/utils/avatarColor";
 
 
 export interface Room {
@@ -275,11 +276,14 @@ const HomePage: React.FC = () => {
                                                 onClick={() => router.push(`/users/${user.id}`)}
                                                 className={styles.card}
                                                 title={
-                                                    <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', padding: '4px 0' }}>
-                                                        <span style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff' }}>{user.name}</span>
-                                                        <span style={{ fontSize: '12px', color: '#a0a0b8', fontWeight: 'normal', marginTop: '1.5px' }}>
-                                        @{user.username}
-                                    </span>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
+                                                        <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: getAvatarColor(user.username ?? ""), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                                                            {getAvatarInitials(user.username ?? "")}
+                                                        </div>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+                                                            <span style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff' }}>{user.name}</span>
+                                                            <span style={{ fontSize: '12px', color: '#a0a0b8', fontWeight: 'normal', marginTop: '1.5px' }}>@{user.username}</span>
+                                                        </div>
                                                     </div>
                                                 }
                                                 extra={
@@ -327,11 +331,14 @@ const HomePage: React.FC = () => {
                                     onClick = { () => router.push(`/users/${user.id}`) }
                                     className={styles.card}
                                     title={
-                                        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', padding: '4px 0' }}>
-                                            <span style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff' }}>{user.name}</span>
-                                            <span style={{ fontSize: '12px', color: '#a0a0b8', fontWeight: 'normal', marginTop: '1.5px' }}>
-                                                 @{user.username}
-                                         </span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
+                                            <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: getAvatarColor(user.username ?? ""), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                                                {getAvatarInitials(user.username ?? "")}
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+                                                <span style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff' }}>{user.name}</span>
+                                                <span style={{ fontSize: '12px', color: '#a0a0b8', fontWeight: 'normal', marginTop: '1.5px' }}>@{user.username}</span>
+                                            </div>
                                         </div>
                                     }
                                     extra={

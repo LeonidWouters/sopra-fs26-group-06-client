@@ -2,7 +2,7 @@
 
 import React, {useEffect, useRef, useState} from 'react';
 import {useParams, useRouter} from 'next/navigation';
-import {Button, Form, Input, Segmented, Spin, Drawer, message} from "antd";
+import {Button, Form, Input, Segmented, Spin, Drawer, Modal} from "antd";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
@@ -497,7 +497,19 @@ const RoomPage: React.FC = () => {
                         </div>
                     </div>
                     <div className={styles.navButtons}>
-                        <Button color="danger" variant="text" icon={<CloseCircleOutlined/>} onClick={leaveRoom}>
+                        <Button
+                            color="danger"
+                            variant="text"
+                            icon={<CloseCircleOutlined/>}
+                            onClick={() => Modal.confirm({
+                                title: "Leave the call?",
+                                content: "Your shared notes will be saved automatically.",
+                                okText: "Leave",
+                                okButtonProps: { danger: true },
+                                cancelText: "Stay",
+                                onOk: leaveRoom,
+                            })}
+                        >
                             Leave Call
                         </Button>
                     </div>
