@@ -154,8 +154,11 @@ const RoomPage: React.FC = () => {
             if (!peerConnectionRef.current && isCaller) {
                 startCall();
             }
+        } else if (callStarted && occupancy < 2) {
+            leaveRoom();
         }
-    }, [occupancy, isCaller]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [occupancy, isCaller, callStarted]);
 
     useEffect(() => {
         if (!isReady) return;
