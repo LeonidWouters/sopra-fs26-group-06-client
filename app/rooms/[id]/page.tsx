@@ -50,6 +50,7 @@ const RoomPage: React.FC = () => {
     const ttsEnabledRef = useRef<boolean>(false);
     const [chat, setChat] = useState<boolean>(false);
     const [chatHistory,setChatHistory] = useState(false);
+    const [isCaller, setIsCaller] = useState<boolean>(false);
     const [form] = Form.useForm();
 
     interface textMsg {
@@ -104,6 +105,7 @@ const RoomPage: React.FC = () => {
                         users.push(caller.username);
                         if (String(caller.id) === String(myUserId)) {
                             myName = caller.username;
+                            setIsCaller(true);
                         }
                     }
                 }
@@ -149,11 +151,14 @@ const RoomPage: React.FC = () => {
         if (occupancy === 2) {
             setCallStarted(true);
 
-            if (!peerConnectionRef.current) {
+            if (!peerConnectionRef.current && isCaller) {
                 startCall();
             }
+        } else if (callStarted && occupancy < 2) {
+            leaveRoom();
         }
-    }, [occupancy]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [occupancy, isCaller, callStarted]);
 
     useEffect(() => {
         if (!isReady) return;
@@ -246,7 +251,9 @@ const RoomPage: React.FC = () => {
 
     const setupPeerConnection = () => {
 
-        const session = new RTCPeerConnection(); //start
+        const session = new RTCPeerConnection({
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+        }); //start
         peerConnectionRef.current = session;
 
         const ownStream = clientRef.current?.srcObject as MediaStream | null;  //kamera added
