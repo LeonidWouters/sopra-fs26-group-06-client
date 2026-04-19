@@ -2,7 +2,7 @@
 
 import React, {useEffect, useRef, useState} from 'react';
 import {useParams, useRouter} from 'next/navigation';
-import {Button, Form, Input, Segmented, Spin, Drawer, Modal} from "antd";
+import {Button, Form, Input, Segmented, Spin, Drawer, Modal, Popover, Select, Alert, notification} from "antd";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
@@ -10,7 +10,7 @@ import dynamic from 'next/dynamic';
 import {User} from "@/types/user";
 import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
-import {CloseCircleOutlined} from "@ant-design/icons";
+import {CloseCircleOutlined, SoundOutlined} from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
 
 
@@ -52,6 +52,7 @@ const RoomPage: React.FC = () => {
     const [chatHistory,setChatHistory] = useState(false);
     const [isCaller, setIsCaller] = useState<boolean>(false);
     const [form] = Form.useForm();
+    const [userVoice,setUserVoice] = useState<SpeechSynthesisVoice>(window.speechSynthesis.getVoices()[0]);
 
     interface textMsg {
         message: string;
@@ -192,12 +193,22 @@ const RoomPage: React.FC = () => {
                 setActiveEditor(message.editor);
             }
 
+            if (message.type === "voice-type"){
+                setUserVoice(message.content);
+            }
             if (message.type === "text-msg") {
+                console.log(message.content);
                 setMessages((messages) => [...messages, message.content]);
-                if (ttsEnabledRef.current) {
-                    const voices = window.speechSynthesis.getVoices();
+                if (disabilityStatusLocal == "HEARING") {
+                    if(!userVoice) {//explicitly initializes user voice
+                        const voices = window.speechSynthesis.getVoices();
+                        const defaultVoice = new SpeechSynthesisUtterance("default voice fallback" + voices[0].name);
+                        setUserVoice(voices[0]);
+                        defaultVoice.voice = userVoice;
+                        window.speechSynthesis.speak(defaultVoice);
+                    }
                     const utterance = new SpeechSynthesisUtterance(message.content.message)
-                    utterance.voice = voices[0]; // select fixed voice, user changeable as a feature enhancement
+                    utterance.voice = userVoice;
                     window.speechSynthesis.speak(utterance);
                 }
                 if (chat){
@@ -306,6 +317,30 @@ const RoomPage: React.FC = () => {
             answer: answer
         }));
     };
+
+    function chooseVoice(index:number) {
+        const voice = window.speechSynthesis.getVoices()[index];
+        setUserVoice(voice);
+        if(disabilityStatusLocal == "HEARING"){//only utter voice if user is hearing
+            const utterance = new window.SpeechSynthesisUtterance("Voice was changed to " + voice.name);
+            utterance.voice = voice;
+            window.speechSynthesis.speak(utterance);
+        }
+        notification.info({
+                title: "Voice changed",
+                description: `Voice was changed to ${voice.name}`,
+                placement: "top",
+                duration: 2,
+            });
+
+
+        if(wsRef.current) {
+            wsRef.current.send(JSON.stringify({
+                type: "voice-type",
+                content: voice
+            }));
+        }
+    }
 
     const setDS = async () => {
         const room = await apiService.get<Room>(`/rooms/${id}`, token);
@@ -600,6 +635,23 @@ const RoomPage: React.FC = () => {
                             </Form.Item>
                         </Form>
                         <Button type ="default" onClick={loadChat}>show chat history</Button>
+                        <Popover
+                            trigger="click"
+                            title="Choose a Voice"
+                            content={
+                                <Select
+                                    style={{ width: 400 }}
+                                    defaultValue={0}
+                                    onChange={(index) => chooseVoice(index)}
+                            options={window.speechSynthesis.getVoices().map((voice, index) => ({
+                                label: voice.name,
+                                value: index
+                            }))}
+                        />
+                        }
+                        >
+                        <Button hidden={!ttsEnabledRef.current} style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
+                    </Popover>
                         <Drawer title = "Chat History" open={chatHistory} onClose={closeChat} placement={"left"} mask={false}>
                             {messages.map((msg, index) => <div key={index}
                             style={{padding: "8px 12px", marginBottom: "8px", backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: "8px", color : "white", justifyContent : msg.client ? "flex-start" : "flex-end"}}>
