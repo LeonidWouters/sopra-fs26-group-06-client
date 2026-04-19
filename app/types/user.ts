@@ -9,4 +9,5 @@ export interface User {
   creationDate: string | null;
   disabilityStatus: "HEARING" | "DEAF" | null;
   friendCount: number | null;
+  friends?: number[];
 }

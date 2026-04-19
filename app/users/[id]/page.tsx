@@ -1,5 +1,5 @@
 "use client";
-import {Avatar, Button, Form, Input, Radio, message} from "antd";
+import {Button, Form, Input, Radio, message} from "antd";
 import React, {useEffect, useState} from "react";
 import {useParams, useRouter} from "next/navigation";
 import {useApi} from "@/hooks/useApi";
@@ -9,6 +9,7 @@ import {useAuth} from "@/hooks/useAuth";
 import mainStyles from "@/styles/mainpage.module.css";
 import profileStyles from "@/styles/profile.module.css";
 import {LogoutOutlined, TeamOutlined} from "@ant-design/icons";
+import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 import Image from "next/image";
 import {PasswordInput} from "antd-password-input-strength";
 
@@ -144,9 +145,21 @@ const Profile: React.FC = () => {
                 <div className={profileStyles.card}>
                     <div style={{display: "flex", alignItems: "center", justifyContent: "space-between"}}>
                         <div style={{display: "flex", alignItems: "center", gap: 24}}>
-                            <Avatar size={88} className={profileStyles.avatar}>
-                                {user.username ? user.username.slice(0, 2).toUpperCase() : "?"}
-                            </Avatar>
+                            <div style={{
+                                width: 88,
+                                height: 88,
+                                borderRadius: "50%",
+                                backgroundColor: getAvatarColor(user.username ?? ""),
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 28,
+                                fontWeight: 700,
+                                color: "#fff",
+                                flexShrink: 0,
+                            }}>
+                                {getAvatarInitials(user.username ?? "")}
+                            </div>
                             <div>
                                 <div style={{fontSize: 30, fontWeight: 600}}>{user.username}</div>
                                 <span style={{

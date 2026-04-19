@@ -2,7 +2,7 @@
 
 import React, {useEffect, useRef, useState} from 'react';
 import {useParams, useRouter} from 'next/navigation';
-import {Button, Form, Input, Segmented, Spin,Drawer} from "antd";
+import {Button, Form, Input, Segmented, Spin, Drawer, Modal, Popover, Select, Alert, notification} from "antd";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
@@ -10,8 +10,7 @@ import dynamic from 'next/dynamic';
 import {User} from "@/types/user";
 import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
-import {CloseCircleOutlined} from "@ant-design/icons";
-import {isProduction} from "@/utils/environment";
+import {CloseCircleOutlined, SoundOutlined} from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
 
 
@@ -51,6 +50,9 @@ const RoomPage: React.FC = () => {
     const ttsEnabledRef = useRef<boolean>(false);
     const [chat, setChat] = useState<boolean>(false);
     const [chatHistory,setChatHistory] = useState(false);
+    const [isCaller, setIsCaller] = useState<boolean>(false);
+    const [form] = Form.useForm();
+    const [userVoice,setUserVoice] = useState<SpeechSynthesisVoice>(window.speechSynthesis.getVoices()[0]);
 
     interface textMsg {
         message: string;
@@ -79,7 +81,7 @@ const RoomPage: React.FC = () => {
     };
 
     useEffect(() => {
-        if (isReady && !token) router.push("/login");
+        if (isReady && !token) router.push("");
     }, [isReady, token]);
 
     useEffect(() => {
@@ -104,6 +106,7 @@ const RoomPage: React.FC = () => {
                         users.push(caller.username);
                         if (String(caller.id) === String(myUserId)) {
                             myName = caller.username;
+                            setIsCaller(true);
                         }
                     }
                 }
@@ -149,11 +152,14 @@ const RoomPage: React.FC = () => {
         if (occupancy === 2) {
             setCallStarted(true);
 
-            if (!peerConnectionRef.current) {
+            if (!peerConnectionRef.current && isCaller) {
                 startCall();
             }
+        } else if (callStarted && occupancy < 2) {
+            leaveRoom();
         }
-    }, [occupancy]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [occupancy, isCaller, callStarted]);
 
     useEffect(() => {
         if (!isReady) return;
@@ -161,7 +167,6 @@ const RoomPage: React.FC = () => {
 
 
         wsRef.current = socket;
-
         socket.onopen = () => {
             socket.send(JSON.stringify({id}));
         }
@@ -188,10 +193,26 @@ const RoomPage: React.FC = () => {
                 setActiveEditor(message.editor);
             }
 
+            if (message.type === "voice-type"){
+                setUserVoice(message.content);
+            }
             if (message.type === "text-msg") {
+                console.log(message.content);
                 setMessages((messages) => [...messages, message.content]);
-                if (ttsEnabledRef.current) {
-                    window.speechSynthesis.speak(new SpeechSynthesisUtterance(message.content.message));
+                if (disabilityStatusLocal == "HEARING") {
+                    if(!userVoice) {//explicitly initializes user voice
+                        const voices = window.speechSynthesis.getVoices();
+                        const defaultVoice = new SpeechSynthesisUtterance("default voice fallback" + voices[0].name);
+                        setUserVoice(voices[0]);
+                        defaultVoice.voice = userVoice;
+                        window.speechSynthesis.speak(defaultVoice);
+                    }
+                    const utterance = new SpeechSynthesisUtterance(message.content.message)
+                    utterance.voice = userVoice;
+                    window.speechSynthesis.speak(utterance);
+                }
+                if (chat){
+                    setSubtitleText(message.content.message);
                 }
             }
 
@@ -210,6 +231,7 @@ const RoomPage: React.FC = () => {
     }, [apiService, token, isReady]);
 
     const sendText = (data:string) => {
+        console.log(data);
         const remoteMessage : textMsg = {
             message : data,
             client: false,
@@ -240,7 +262,9 @@ const RoomPage: React.FC = () => {
 
     const setupPeerConnection = () => {
 
-        const session = new RTCPeerConnection(); //start
+        const session = new RTCPeerConnection({
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+        }); //start
         peerConnectionRef.current = session;
 
         const ownStream = clientRef.current?.srcObject as MediaStream | null;  //kamera added
@@ -249,6 +273,7 @@ const RoomPage: React.FC = () => {
         }
 
         session.ontrack = (event) => { //partner video
+            console.log(event.type);
             if (remoteRef.current) {
                 remoteRef.current.srcObject = event.streams[0];
             }
@@ -268,6 +293,7 @@ const RoomPage: React.FC = () => {
 
 
     const startCall = async () => {
+        console.log("Starting call");
         const session = setupPeerConnection();
 
         const offer = await session.createOffer();
@@ -292,6 +318,30 @@ const RoomPage: React.FC = () => {
         }));
     };
 
+    function chooseVoice(index:number) {
+        const voice = window.speechSynthesis.getVoices()[index];
+        setUserVoice(voice);
+        if(disabilityStatusLocal == "HEARING"){//only utter voice if user is hearing
+            const utterance = new window.SpeechSynthesisUtterance("Voice was changed to " + voice.name);
+            utterance.voice = voice;
+            window.speechSynthesis.speak(utterance);
+        }
+        notification.info({
+                title: "Voice changed",
+                description: `Voice was changed to ${voice.name}`,
+                placement: "top",
+                duration: 2,
+            });
+
+
+        if(wsRef.current) {
+            wsRef.current.send(JSON.stringify({
+                type: "voice-type",
+                content: voice
+            }));
+        }
+    }
+
     const setDS = async () => {
         const room = await apiService.get<Room>(`/rooms/${id}`, token);
         const user1 = await apiService.get<User>(`/users/${room.CallerID}`, token)
@@ -314,15 +364,22 @@ const RoomPage: React.FC = () => {
     }
 
     function startSTT() {
-        if(speechRef.current){
+        if (speechRef.current) {
             speechRef.current.stop();
         }
+        let sentence = "";
 
+        speechRef.current = new SpeechRecognition() || new window.webkitSpeechRecognition; //get speech recognition object based on browser
 
-        speechRef.current = new window.SpeechRecognition();
+        if (!speechRef.current) {
+            setSubtitleText("Speech recognition not supported in this browser, activating text to text chat");
+            setChat(true);
+            return;
+        }
         speechRef.current.continuous = true;
         speechRef.current.interimResults = true;
         speechRef.current.start();
+        console.log(speechRef.current);
 
         speechRef.current.onresult = event => {
             let message = "";
@@ -332,7 +389,7 @@ const RoomPage: React.FC = () => {
 
                 if (event.results[i].isFinal) {
                     console.log("Final transcript:", message);
-
+                    sentence += message;
                     if (wsRef.current?.readyState === WebSocket.OPEN) {
                         wsRef.current.send(JSON.stringify({
                             type: "speech-to-text",
@@ -343,12 +400,24 @@ const RoomPage: React.FC = () => {
             }
         };
 
-        const stopSpeechRecognition = () => {
-            if (speechRef.current) {
-                speechRef.current.stop();
-            }
+        speechRef.current.onaudioend = () => {//after pause in speech, send message to be appended in chat for later lookup
+                sendText(sentence);
         }
-        return stopSpeechRecognition;
+
+        speechRef.current.onend = () => {
+            if(speechRef.current == null){
+                startSTT();
+            }
+            else {
+                setTimeout((speechRef) => speechRef.current.start(), 1000);
+            }
+
+        }
+
+        speechRef.current.onerror = () => {
+            startSTT();
+        }
+
     }
 
 
@@ -386,13 +455,10 @@ const RoomPage: React.FC = () => {
             if (disabilityStatusRemote == "DEAF" && disabilityStatusLocal == "HEARING") {
                 console.log("STT")
                 startSTT();
+                startTTS();
             }
             if (disabilityStatusLocal == "HEARING" && disabilityStatusRemote == "HEARING") {
                 console.log("do nothing")
-            }
-            if (disabilityStatusRemote == "DEAF" && disabilityStatusLocal == "HEARING") {
-                console.log("TTS")
-                startTTS();
             }
             if (disabilityStatusLocal == "DEAF" && disabilityStatusRemote == "HEARING") {
                 console.log("chat for deaf")
@@ -473,7 +539,19 @@ const RoomPage: React.FC = () => {
                         </div>
                     </div>
                     <div className={styles.navButtons}>
-                        <Button color="danger" variant="text" icon={<CloseCircleOutlined/>} onClick={leaveRoom}>
+                        <Button
+                            color="danger"
+                            variant="text"
+                            icon={<CloseCircleOutlined/>}
+                            onClick={() => Modal.confirm({
+                                title: "Leave the call?",
+                                content: "Your shared notes will be saved automatically.",
+                                okText: "Leave",
+                                okButtonProps: { danger: true },
+                                cancelText: "Stay",
+                                onOk: leaveRoom,
+                            })}
+                        >
                             Leave Call
                         </Button>
                     </div>
@@ -548,15 +626,32 @@ const RoomPage: React.FC = () => {
                     </div>
 
                     <div style={{padding: "12px 24px", borderTop: "1px solid #e5e7eb"}}>
-                        <Form onFinish={(values) => sendText(values.message)} layout="inline">
+                        <Form form = {form} onFinish={(values) => {
+                            sendText(values.message);
+                            form.resetFields();
+                        }} layout="inline">
                             <Form.Item name="message" style={{flex: 1, marginBottom: 0}} hidden={!chat}>
-                                <Input placeholder="Type a message..."/>
-                            </Form.Item>
-                            <Form.Item style={{marginBottom: 0}} hidden={!chat}>
-                                <Button htmlType="submit" type="primary" >Send</Button>
+                                <Input placeholder="Press enter to submit" />
                             </Form.Item>
                         </Form>
                         <Button type ="default" onClick={loadChat}>show chat history</Button>
+                        <Popover
+                            trigger="click"
+                            title="Choose a Voice"
+                            content={
+                                <Select
+                                    style={{ width: 400 }}
+                                    defaultValue={0}
+                                    onChange={(index) => chooseVoice(index)}
+                            options={window.speechSynthesis.getVoices().map((voice, index) => ({
+                                label: voice.name,
+                                value: index
+                            }))}
+                        />
+                        }
+                        >
+                        <Button hidden={!ttsEnabledRef.current} style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
+                    </Popover>
                         <Drawer title = "Chat History" open={chatHistory} onClose={closeChat} placement={"left"} mask={false}>
                             {messages.map((msg, index) => <div key={index}
                             style={{padding: "8px 12px", marginBottom: "8px", backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: "8px", color : "white", justifyContent : msg.client ? "flex-start" : "flex-end"}}>
@@ -587,6 +682,7 @@ const RoomPage: React.FC = () => {
                     </div>
 
                     <div data-color-mode="light" style={{flex: 1}}>
+                        {activeEditor === myUsername?(
                         <MDEditor
                             value={markdownText}
                             onChange={(value: string | undefined) => {
@@ -597,11 +693,13 @@ const RoomPage: React.FC = () => {
                                 }
                             }}
                             height={600}
-                            preview={activeEditor === myUsername ? "live" : "preview"}
                             textareaProps={{
                                 placeholder: "# Shared notes\n\nHere you can collaboratively edit notes..."
                             }}
-                        />
+                        />) : (
+                            <MDEditor hideToolbar={true} value = {markdownText} preview={"preview"} height={600}/>
+                            )
+                        }
                     </div>
                 </div>
 
