@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Card, Button, Typography, message, Tag, ConfigProvider, Modal, Input } from 'antd';
+import { Card, Button, Typography, message, Tag, ConfigProvider, Modal, Input, Select, Form } from 'antd';
 import Image from 'next/image';
 import styles from "@/styles/mainpage.module.css";
 import { LogoutOutlined, UserOutlined, UsergroupAddOutlined } from '@ant-design/icons';
@@ -10,6 +10,7 @@ import { User } from "@/types/user";
 import { useApi } from "@/hooks/useApi";
 import { useAuth } from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
+import { getAvatarColor, getAvatarInitials } from "@/utils/avatarColor";
 
 
 export interface Room {
@@ -19,6 +20,9 @@ export interface Room {
     roomStatus: "EMPTY" | "JOINABLE" | "FULL";
     callerID: number | null;
     calleeID: number | null;
+    isPrivate?: boolean;
+    creatorId?: number;
+    invitedUserId?: number;
 }
 
 const { Title, Paragraph } = Typography;
@@ -36,6 +40,11 @@ const HomePage: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
+    const [isPrivateModalOpen, setIsPrivateModalOpen] = useState(false);
+    const [privateRoomName, setPrivateRoomName] = useState("");
+    const [privateRoomDesc, setPrivateRoomDesc] = useState("");
+    const [inviteeUsername, setInviteeUsername] = useState<string | null>(null);
+    const [notifiedRoomIds, setNotifiedRoomIds] = useState<number[]>([]);
     const showModal = () => {
         setIsModalOpen(true);
     };
@@ -92,6 +101,48 @@ const HomePage: React.FC = () => {
         const interval = setInterval(fetchUser, 3000);
         return () => clearInterval(interval);
     }, [apiService, isReady, token, router]);
+
+    useEffect(() => {
+        if (!userId) return;
+        const newInvites = rooms.filter(r => r.isPrivate && String(r.invitedUserId) === String(userId) && !notifiedRoomIds.includes(r.id));
+
+        if (newInvites.length > 0) {
+            newInvites.forEach(room => {
+                const inviter = users.find(u => String(u.id) === String(room.creatorId));
+                const inviterName = inviter ? inviter.name : "a friend";
+                message.info(`You got invited to join "${room.name}" by ${inviterName}!`);
+            });
+            setNotifiedRoomIds(prev => [...prev, ...newInvites.map(r => r.id)]);
+        }
+    }, [rooms, userId, notifiedRoomIds, users]);
+
+    const handleCreatePrivateRoom = async () => {
+        if (!inviteeUsername) {
+            message.error("Please invite a friend.");
+            return;
+        }
+        if (!privateRoomName){
+            message.error("Please enter a room name!.");
+            return;
+        }
+        try {
+            const newRoom = await apiService.post<Room>("/rooms/private", { name: privateRoomName, description: privateRoomDesc }, token);
+            await apiService.post(`/rooms/${newRoom.id}/invite`, { username: inviteeUsername }, token);
+
+            message.success("Room created & invitation sent!");
+            setIsPrivateModalOpen(false);
+            setPrivateRoomName("");
+            setPrivateRoomDesc("");
+            setInviteeUsername(null);
+
+            const fetchedRooms: Room[] = await apiService.get<Room[]>("/rooms", token);
+            setRooms(fetchedRooms);
+        } catch (error) {
+            message.error("An error eccurred while creating the room or sending the invitation.");
+            console.error(error);
+        }
+    };
+
 
     const handleJoinRoom = async (roomId: number) => {
         try {
@@ -150,7 +201,54 @@ const HomePage: React.FC = () => {
 
 
             <div className={styles.mainContent}>
-                <Title level={2} className={styles.title}>Available Rooms</Title>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Title level={2} className={styles.title} style={{ margin: 0 }}>Available Rooms</Title>
+                    <Button type="primary" onClick={() => setIsPrivateModalOpen(true)} style={{ background: "linear-gradient(90deg, #4f46e5, #7c3aed)", border: "none" }}>
+                        + Create Private Room
+                    </Button>
+                </div>
+
+                <Modal
+                    title="Create Private Room"
+                    open={isPrivateModalOpen}
+                    onOk={handleCreatePrivateRoom}
+                    onCancel={() => setIsPrivateModalOpen(false)}
+                    okText="Create & Invite"
+                >
+                    <Form layout="vertical" style={{ marginTop: "16px" }}>
+                        <Form.Item label="Room Name" required>
+                            <Input
+                                placeholder="Enter room name"
+                                value={privateRoomName}
+                                onChange={e => setPrivateRoomName(e.target.value)}
+                            />
+                        </Form.Item>
+
+                        <Form.Item label="Description">
+                            <Input.TextArea
+                                placeholder="Enter description (optional)"
+                                value={privateRoomDesc}
+                                onChange={e => setPrivateRoomDesc(e.target.value)}
+                                rows={3}
+                            />
+                        </Form.Item>
+
+                        <Form.Item label="Invite a Friend" required>
+                            <Select
+                                placeholder="Select a friend to invite"
+                                value={inviteeUsername}
+                                onChange={value => setInviteeUsername(value)}
+                                style={{ width: "100%" }}
+                            >
+                                {users.filter(u => u.id && (user?.friends || []).map(String).includes(String(u.id))).map(friend => (
+                                    <Select.Option key={friend.id} value={friend.username}>
+                                        {friend.name} (@{friend.username})
+                                    </Select.Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                    </Form>
+                </Modal>
                 <Paragraph className={styles.subtitle}>
                     Join a room to start a video call • Maximum 2 people per room
                 </Paragraph>
@@ -176,14 +274,22 @@ const HomePage: React.FC = () => {
                             >
                                 <Card
                                     className={styles.card}
-                                    title={<span style={{ color: '#ffffff' }}>{room.name}</span>}
+                                    title={<span style={{ color: '#ffffff' }}>{room.name} {room.isPrivate && <Tag color="purple" style={{ marginLeft: 8 }}>Private</Tag>}</span>}
                                     extra={
-                                        <Tag
-                                            color={room.roomStatus === "FULL" ? "red" : "green"}
-                                            style={{ margin: 0 }}
-                                        >
-                                            {room.roomStatus === "EMPTY" ? "0/2" : (room.roomStatus === "JOINABLE" ? "1/2" : "2/2")}
-                                        </Tag>
+                                        <span className={`${styles.roomStatusBadge} ${
+                                            room.roomStatus === "EMPTY" ? styles.roomStatusBadgeEmpty :
+                                            room.roomStatus === "JOINABLE" ? styles.roomStatusBadgeJoinable :
+                                            styles.roomStatusBadgeFull
+                                        }`}>
+                                            <span className={`${styles.statusDot} ${
+                                                room.roomStatus === "EMPTY" ? styles.statusDotEmpty :
+                                                room.roomStatus === "JOINABLE" ? styles.statusDotJoinable :
+                                                styles.statusDotFull
+                                            }`} />
+                                            {room.roomStatus === "EMPTY" ? "Available" :
+                                             room.roomStatus === "JOINABLE" ? "1 Person Waiting" :
+                                             "Full"}
+                                        </span>
                                     }
                                     bordered={false}
                                     styles={{
@@ -193,10 +299,20 @@ const HomePage: React.FC = () => {
                                 >
                                     <Paragraph style={{ color: '#e2e8f0' }}>{room.description}</Paragraph>
 
+                                    <div className={styles.occupancySlots}>
+                                        <div className={`${styles.occupancySlot} ${room.roomStatus !== "EMPTY" ? styles.occupancySlotFilled : styles.occupancySlotEmpty}`}>
+                                            {room.roomStatus !== "EMPTY" ? "👤" : ""}
+                                        </div>
+                                        <div className={`${styles.occupancySlot} ${room.roomStatus === "FULL" ? styles.occupancySlotFilled : styles.occupancySlotEmpty}`}>
+                                            {room.roomStatus === "FULL" ? "👤" : ""}
+                                        </div>
+                                    </div>
+
                                     <Button
                                         type="primary"
                                         disabled={room.roomStatus === "FULL"}
                                         onClick={() => handleJoinRoom(room.id)}
+                                        style={{ marginTop: 12 }}
                                     >
                                         {room.roomStatus === "FULL" ? "Room Full" : "Join Room"}
                                     </Button>
@@ -257,11 +373,14 @@ const HomePage: React.FC = () => {
                                                 onClick={() => router.push(`/users/${user.id}`)}
                                                 className={styles.card}
                                                 title={
-                                                    <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', padding: '4px 0' }}>
-                                                        <span style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff' }}>{user.name}</span>
-                                                        <span style={{ fontSize: '12px', color: '#a0a0b8', fontWeight: 'normal', marginTop: '1.5px' }}>
-                                        @{user.username}
-                                    </span>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
+                                                        <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: getAvatarColor(user.username ?? ""), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                                                            {getAvatarInitials(user.username ?? "")}
+                                                        </div>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+                                                            <span style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff' }}>{user.name}</span>
+                                                            <span style={{ fontSize: '12px', color: '#a0a0b8', fontWeight: 'normal', marginTop: '1.5px' }}>@{user.username}</span>
+                                                        </div>
                                                     </div>
                                                 }
                                                 extra={
@@ -309,11 +428,14 @@ const HomePage: React.FC = () => {
                                     onClick = { () => router.push(`/users/${user.id}`) }
                                     className={styles.card}
                                     title={
-                                        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', padding: '4px 0' }}>
-                                            <span style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff' }}>{user.name}</span>
-                                            <span style={{ fontSize: '12px', color: '#a0a0b8', fontWeight: 'normal', marginTop: '1.5px' }}>
-                                                 @{user.username}
-                                         </span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
+                                            <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: getAvatarColor(user.username ?? ""), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                                                {getAvatarInitials(user.username ?? "")}
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+                                                <span style={{ fontSize: '16px', fontWeight: 600, color: '#ffffff' }}>{user.name}</span>
+                                                <span style={{ fontSize: '12px', color: '#a0a0b8', fontWeight: 'normal', marginTop: '1.5px' }}>@{user.username}</span>
+                                            </div>
                                         </div>
                                     }
                                     extra={

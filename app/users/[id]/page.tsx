@@ -1,5 +1,5 @@
 "use client";
-import {Avatar, Button, Form, Input, Radio, message} from "antd";
+import {Button, Form, Input, Radio, message} from "antd";
 import React, {useEffect, useState} from "react";
 import {useParams, useRouter} from "next/navigation";
 import {useApi} from "@/hooks/useApi";
@@ -8,7 +8,8 @@ import useLocalStorage from "@/hooks/useLocalStorage";
 import {useAuth} from "@/hooks/useAuth";
 import mainStyles from "@/styles/mainpage.module.css";
 import profileStyles from "@/styles/profile.module.css";
-import {LogoutOutlined} from "@ant-design/icons";
+import {LogoutOutlined, TeamOutlined} from "@ant-design/icons";
+import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 import Image from "next/image";
 import {PasswordInput} from "antd-password-input-strength";
 
@@ -34,6 +35,8 @@ const Profile: React.FC = () => {
     const [level, setLevel] = useState(0);
     const minLevel = 1;
     const errorMessage = "Password is too weak";
+    const [isFriend, setIsFriend] = useState(false);
+    const [requestSent, setRequestSent] = useState(false);
 
 
     useEffect(() => {
@@ -53,6 +56,12 @@ const Profile: React.FC = () => {
             } catch (error) {
                 messageApi.open({type: "error", content: "Could not load user."});
             }
+            try {
+                const friends = await apiService.get<User[]>(`/users/${id}/friends`, token);
+                setIsFriend(friends.some(friend => friend.id === loggedInId)); // checks if friend or not
+            } catch (error) {
+                console.error("Could not load friends:", error);
+            }
         };
         fetchUser();
     }, [apiService, isReady, token, id, router]);
@@ -63,6 +72,16 @@ const Profile: React.FC = () => {
         clearToken();
         clearId();
         router.push("/");
+    };
+
+    const handleAddFriend = async () => {
+        try {
+            await apiService.post(`/users/${id}/friend-request`, {}, token);
+            setRequestSent(true);
+            messageApi.open({type: "success", content: "Friend request sent!"});
+        } catch (error) {
+            messageApi.open({type: "error", content: "Could not send friend request."});
+        }
     };
 
     const changePassword = async (values: FormFieldProps) => {
@@ -126,9 +145,21 @@ const Profile: React.FC = () => {
                 <div className={profileStyles.card}>
                     <div style={{display: "flex", alignItems: "center", justifyContent: "space-between"}}>
                         <div style={{display: "flex", alignItems: "center", gap: 24}}>
-                            <Avatar size={88} className={profileStyles.avatar}>
-                                {user.username ? user.username.slice(0, 2).toUpperCase() : "?"}
-                            </Avatar>
+                            <div style={{
+                                width: 88,
+                                height: 88,
+                                borderRadius: "50%",
+                                backgroundColor: getAvatarColor(user.username ?? ""),
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 28,
+                                fontWeight: 700,
+                                color: "#fff",
+                                flexShrink: 0,
+                            }}>
+                                {getAvatarInitials(user.username ?? "")}
+                            </div>
                             <div>
                                 <div style={{fontSize: 30, fontWeight: 600}}>{user.username}</div>
                                 <span style={{
@@ -143,28 +174,48 @@ const Profile: React.FC = () => {
                                 <div style={{color: "#4a5565", marginTop: 8}}>{user.bio}</div>
                             </div>
                         </div>
-                        <Button
-                            type="primary"
-                            onClick={() => router.push(`/users/${id}/transcripts`)}
-                            style={{
-                                background: "linear-gradient(90deg, #4f46e5, #7c3aed)",
-                                border: "none",
-                                borderRadius: 10,
-                                height: 44,
-                                padding: "0 24px",
-                                fontSize: 15,
-                                fontWeight: 500,
-                            }}
-                        >
-                            See latest transcripts/notes
-                        </Button>
+                        <div style={{display: "flex", gap: 12}}>
+                            {!isOwnProfile && !isFriend && !requestSent && (
+                                <Button onClick={handleAddFriend}>+ Add Friend</Button>
+                            )}
+                            {!isOwnProfile && isFriend && (
+                                <Button disabled>Friends</Button>
+                            )}
+                            {!isOwnProfile && requestSent && (
+                                <Button disabled>Request Sent</Button>
+                            )}
+                            <Button
+                                onClick={() => router.push(`/users/${id}/friends`)}
+                                icon={<TeamOutlined/>}
+                                style={{borderRadius: 10, height: 44, padding: "0 24px", fontSize: 15, fontWeight: 500}}
+                            >
+                                Friends
+                            </Button>
+                            <Button
+                                type="primary"
+                                onClick={() => router.push(`/users/${id}/transcripts`)}
+                                style={{
+                                    background: "linear-gradient(90deg, #4f46e5, #7c3aed)",
+                                    border: "none",
+                                    borderRadius: 10,
+                                    height: 44,
+                                    padding: "0 24px",
+                                    fontSize: 15,
+                                    fontWeight: 500,
+                                }}
+                            >
+                                See latest transcripts/notes
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
                 {isOwnProfile && (
                     <div className={profileStyles.card}>
                         <div style={{fontSize: 24, fontWeight: 600, color: "#101828"}}>Edit Profile</div>
-                        <div style={{color: "#4a5565", marginTop: 4, marginBottom: 24}}>Change your username, bio or accessibility status</div>
+                        <div style={{color: "#4a5565", marginTop: 4, marginBottom: 24}}>Change your username, bio or
+                            accessibility status
+                        </div>
                         <Form layout="vertical" onFinish={handleSaveProfile}>
                             <Form.Item label="Username">
                                 <Input value={editUsername} onChange={e => setEditUsername(e.target.value)}/>
@@ -187,7 +238,9 @@ const Profile: React.FC = () => {
                 {isOwnProfile && (
                     <div className={profileStyles.card}>
                         <div style={{fontSize: 24, fontWeight: 600, color: "#101828"}}>Change Password</div>
-                        <div style={{color: "#4a5565", marginTop: 4, marginBottom: 24}}>You will be logged out after changing your password</div>
+                        <div style={{color: "#4a5565", marginTop: 4, marginBottom: 24}}>You will be logged out after
+                            changing your password
+                        </div>
                         <Form layout="vertical" onFinish={changePassword}>
                             <Form.Item
                                 label="New Password"
@@ -228,7 +281,7 @@ const Profile: React.FC = () => {
                                 dependencies={['password']}
                                 rules={[
                                     {required: true, message: "Please confirm your password"},
-                                    ({ getFieldValue }) => ({
+                                    ({getFieldValue}) => ({
                                         validator(_, value) {
                                             if (!value || getFieldValue('password') === value) {
                                                 return Promise.resolve();
