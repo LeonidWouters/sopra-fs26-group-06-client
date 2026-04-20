@@ -194,13 +194,14 @@ const RoomPage: React.FC = () => {
             }
 
             if (message.type === "voice-type"){
-                setUserVoice(message.content);
+                const voice = window.speechSynthesis.getVoices().find(v => v.voiceURI === message.content)
+                setUserVoice( voice || window.speechSynthesis.getVoices()[0]);
             }
             if (message.type === "text-msg") {
                 console.log(message.content);
-                setMessages((messages) => [...messages, message.content]);
-                if (disabilityStatusLocal == "HEARING") {
-                    if(!userVoice) {//explicitly initializes user voice
+                if (ttsEnabledRef) {
+                    setMessages((messages) => [...messages, message.content]);
+                    if (!userVoice) {//explicitly initializes user voice
                         const voices = window.speechSynthesis.getVoices();
                         const defaultVoice = new SpeechSynthesisUtterance("default voice fallback" + voices[0].name);
                         setUserVoice(voices[0]);
@@ -210,9 +211,9 @@ const RoomPage: React.FC = () => {
                     const utterance = new SpeechSynthesisUtterance(message.content.message)
                     utterance.voice = userVoice;
                     window.speechSynthesis.speak(utterance);
-                }
-                if (chat){
-                    setSubtitleText(message.content.message);
+                    if (chat) {
+                        setSubtitleText(message.content.message);
+                    }
                 }
             }
 
@@ -337,7 +338,7 @@ const RoomPage: React.FC = () => {
         if(wsRef.current) {
             wsRef.current.send(JSON.stringify({
                 type: "voice-type",
-                content: voice
+                content: voice.voiceURI
             }));
         }
     }
@@ -650,7 +651,7 @@ const RoomPage: React.FC = () => {
                         />
                         }
                         >
-                        <Button hidden={!ttsEnabledRef.current} style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
+                        <Button hidden={ttsEnabledRef.current} style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
                     </Popover>
                         <Drawer title = "Chat History" open={chatHistory} onClose={closeChat} placement={"left"} mask={false}>
                             {messages.map((msg, index) => <div key={index}
