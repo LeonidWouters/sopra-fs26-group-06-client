@@ -74,11 +74,9 @@ const FriendsPage: React.FC = () => {
                 </div>
             </div>
             <div className={mainStyles.mainContent}>
-
                 <div className={mainStyles.userOverview}>
                     <div style={{fontSize: 24, fontWeight: 600, marginBottom: 16}}>Friends ({friends.length})</div>
                     <div className={mainStyles.userGrid}>
-                        //map logic copied from user overview mainpage
                         {friends.length === 0 ? <p>No friends yet.</p> : friends.map((friend) => (
                             <Card key={friend.id} className={mainStyles.card}
                                   onClick={() => router.push(`/users/${friend.id}`)}
