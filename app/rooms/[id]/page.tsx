@@ -264,8 +264,32 @@ const RoomPage: React.FC = () => {
     const setupPeerConnection = () => {
 
         const session = new RTCPeerConnection({
-            iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-        }); //start
+            iceServers: [
+            {
+                urls: "stun:stun.relay.metered.ca:80",
+            },
+            {
+                urls: "turn:global.relay.metered.ca:80",
+                username: "8bcbccaceecd36e3d8c8397e",
+                credential: "5U5bBTpdZ4mp8xfp",
+            },
+            {
+                urls: "turn:global.relay.metered.ca:80?transport=tcp",
+                username: "8bcbccaceecd36e3d8c8397e",
+                credential: "5U5bBTpdZ4mp8xfp",
+            },
+            {
+                urls: "turn:global.relay.metered.ca:443",
+                username: "8bcbccaceecd36e3d8c8397e",
+                credential: "5U5bBTpdZ4mp8xfp",
+            },
+            {
+                urls: "turns:global.relay.metered.ca:443?transport=tcp",
+                username: "8bcbccaceecd36e3d8c8397e",
+                credential: "5U5bBTpdZ4mp8xfp",
+            },
+        ],
+    }); //start
         peerConnectionRef.current = session;
 
         const ownStream = clientRef.current?.srcObject as MediaStream | null;  //kamera added
