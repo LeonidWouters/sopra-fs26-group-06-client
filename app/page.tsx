@@ -48,14 +48,14 @@ const Login: React.FC = () => {
             // Navigate to the user overview
             router.push(`/mainpage`);
         } catch (error) {
-            if (error instanceof Error && error.message.includes("The password provided is not correct!")) {
+            if (error instanceof Error && error.message.includes("Wrong Password!")) {
                 Modal.error({
                     title: "Error",
                     content: "The password you entered is wrong. Please try again!",
                 });
             } else if (
                 error instanceof Error &&
-                error.message.includes("The username provided is not correct!")
+                error.message.includes("This User does not exist!")
             ) {
                 Modal.error({
                     title: "Error",
