@@ -265,31 +265,31 @@ const RoomPage: React.FC = () => {
 
         const session = new RTCPeerConnection({
             iceServers: [
-            {
-                urls: "stun:stun.relay.metered.ca:80",
-            },
-            {
-                urls: "turn:global.relay.metered.ca:80",
-                username: "8bcbccaceecd36e3d8c8397e",
-                credential: "5U5bBTpdZ4mp8xfp",
-            },
-            {
-                urls: "turn:global.relay.metered.ca:80?transport=tcp",
-                username: "8bcbccaceecd36e3d8c8397e",
-                credential: "5U5bBTpdZ4mp8xfp",
-            },
-            {
-                urls: "turn:global.relay.metered.ca:443",
-                username: "8bcbccaceecd36e3d8c8397e",
-                credential: "5U5bBTpdZ4mp8xfp",
-            },
-            {
-                urls: "turns:global.relay.metered.ca:443?transport=tcp",
-                username: "8bcbccaceecd36e3d8c8397e",
-                credential: "5U5bBTpdZ4mp8xfp",
-            },
-        ],
-    }); //start
+                {
+                    urls: "stun:stun.relay.metered.ca:80",
+                },
+                {
+                    urls: "turn:standard.relay.metered.ca:80",
+                    username: "a2b6d3c83dc1a75633bfe850",
+                    credential: "ZMCzjBW7CK114eO4",
+                },
+                {
+                    urls: "turn:standard.relay.metered.ca:80?transport=tcp",
+                    username: "a2b6d3c83dc1a75633bfe850",
+                    credential: "ZMCzjBW7CK114eO4",
+                },
+                {
+                    urls: "turn:standard.relay.metered.ca:443",
+                    username: "a2b6d3c83dc1a75633bfe850",
+                    credential: "ZMCzjBW7CK114eO4",
+                },
+                {
+                    urls: "turns:standard.relay.metered.ca:443?transport=tcp",
+                    username: "a2b6d3c83dc1a75633bfe850",
+                    credential: "ZMCzjBW7CK114eO4",
+                },
+            ],
+        }); //start
         peerConnectionRef.current = session;
 
         const ownStream = clientRef.current?.srcObject as MediaStream | null;  //kamera added
