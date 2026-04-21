@@ -81,7 +81,7 @@ const RoomPage: React.FC = () => {
     };
 
     useEffect(() => {
-        if (isReady && !token) router.push("");
+        if (isReady && !token) router.push("/");
     }, [isReady, token]);
 
     useEffect(() => {
