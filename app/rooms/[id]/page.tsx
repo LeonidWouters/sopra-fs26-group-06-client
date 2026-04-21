@@ -10,7 +10,7 @@ import dynamic from 'next/dynamic';
 import {User} from "@/types/user";
 import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
-import {CloseCircleOutlined, SoundOutlined} from "@ant-design/icons";
+import {CloseCircleOutlined, SoundOutlined, AudioOutlined, AudioMutedOutlined} from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
 
 
@@ -53,6 +53,8 @@ const RoomPage: React.FC = () => {
     const [isCaller, setIsCaller] = useState<boolean>(false);
     const [form] = Form.useForm();
     const [userVoice,setUserVoice] = useState<SpeechSynthesisVoice>(window.speechSynthesis.getVoices()[0]);
+    const [isMuted, setIsMuted] = useState<boolean>(false);
+    const [remoteMuted, setRemoteMuted] = useState<boolean>(false);
 
     interface textMsg {
         message: string;
@@ -78,6 +80,22 @@ const RoomPage: React.FC = () => {
         }
         await apiService.put(`/rooms/${id}/leave`, null, token);
         router.push("/mainpage");
+    };
+
+    const toggleMute = () => {
+        const stream = clientRef.current?.srcObject as MediaStream | null;
+        if (stream) {
+            stream.getAudioTracks().forEach(track => {
+                track.enabled = !track.enabled;
+            });
+        }
+        const newMuted = !isMuted;
+        setIsMuted(newMuted);
+        wsRef.current?.send(JSON.stringify({
+            type: "mute-status",
+            muted: newMuted,
+            username: myUsername,
+        }));
     };
 
     useEffect(() => {
@@ -219,6 +237,9 @@ const RoomPage: React.FC = () => {
 
             if (message.type === "speech-to-text") {
                 setSubtitleText(message.content);
+            }
+            if (message.type === "mute-status") {
+                setRemoteMuted(message.muted);
             }
         };
 
@@ -648,18 +669,36 @@ const RoomPage: React.FC = () => {
                                 {subtitleText}
                             </div>
                         )}
+                        {remoteMuted && (
+                            <div style={{
+                                position: "absolute",
+                                top: "16px",
+                                right: "16px",
+                                backgroundColor: "rgba(239, 68, 68, 0.85)",
+                                color: "#ffffff",
+                                padding: "6px 14px",
+                                borderRadius: "8px",
+                                fontSize: "13px",
+                                fontWeight: 600,
+                            }}>
+                                {`@${participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner"} is muted`}
+                            </div>
+                        )}
                     </div>
 
-                    <div style={{padding: "12px 24px", borderTop: "1px solid #e5e7eb"}}>
-                        <Form form = {form} onFinish={(values) => {
-                            sendText(values.message);
-                            form.resetFields();
-                        }} layout="inline">
-                            <Form.Item name="message" style={{flex: 1, marginBottom: 0}} hidden={!chat}>
-                                <Input placeholder="Press enter to submit" />
-                            </Form.Item>
-                        </Form>
-                        <Button type ="default" onClick={loadChat}>show chat history</Button>
+                    <div style={{padding: "12px 24px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center"}}>
+                        <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
+                            <Form form = {form} onFinish={(values) => {
+                                sendText(values.message);
+                                form.resetFields();
+                            }} layout="inline">
+                                <Form.Item name="message" style={{flex: 1, marginBottom: 0}} hidden={!chat}>
+                                    <Input placeholder="Press enter to submit" />
+                                </Form.Item>
+                            </Form>
+                            <Button type="default" onClick={loadChat}>show chat history</Button>
+                        </div>
+                    <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
                         <Popover
                             trigger="click"
                             title="Choose a Voice"
@@ -677,12 +716,23 @@ const RoomPage: React.FC = () => {
                         >
                         <Button hidden={ttsEnabledRef.current} style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
                     </Popover>
+                        <Button
+                            shape="circle"
+                            icon={isMuted ? <AudioMutedOutlined /> : <AudioOutlined />}
+                            onClick={toggleMute}
+                            style={{
+                                backgroundColor: isMuted ? "#ef4444" : "#6B21D6",
+                                color: "white",
+                                border: "none",
+                            }}
+                        />
+                    </div>
                         <Drawer title = "Chat History" open={chatHistory} onClose={closeChat} placement={"left"} mask={false}>
                             {messages.map((msg, index) => <div key={index}
-                            style={{padding: "8px 12px", marginBottom: "8px", backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: "8px", color : "white", justifyContent : msg.client ? "flex-start" : "flex-end"}}>
-                            {msg.timestamp + " : " + msg.message}</div>)}
+                                                               style={{padding: "8px 12px", marginBottom: "8px", backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: "8px", color : "white", justifyContent : msg.client ? "flex-start" : "flex-end"}}>
+                                {msg.timestamp + " : " + msg.message}</div>)}
                         </Drawer>
-                    </div>
+                </div>
                 </div>
                 <div style={{flex: 1, padding: "24px", display: "flex", flexDirection: "column"}}>
                     <div style={{
