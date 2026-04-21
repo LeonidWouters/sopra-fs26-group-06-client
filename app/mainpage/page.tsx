@@ -137,6 +137,7 @@ const HomePage: React.FC = () => {
 
             const fetchedRooms: Room[] = await apiService.get<Room[]>("/rooms", token);
             setRooms(fetchedRooms);
+            handleJoinRoom(newRoom.id);
         } catch (error) {
             message.error("An error eccurred while creating the room or sending the invitation.");
             console.error(error);
