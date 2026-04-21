@@ -53,7 +53,7 @@ const RoomPage: React.FC = () => {
     const [chatHistory,setChatHistory] = useState(false);
     const [isCaller, setIsCaller] = useState<boolean>(false);
     const [form] = Form.useForm();
-    const [userVoice,setUserVoice] = useState<SpeechSynthesisVoice | null>(null);
+    const userVoiceURI = useRef<string>("");
     const [isMuted, setIsMuted] = useState<boolean>(false);
     const [remoteMuted, setRemoteMuted] = useState<boolean>(false);
 
@@ -215,21 +215,14 @@ const RoomPage: React.FC = () => {
             if (message.type === "voice-type"){
                 console.log(message.content);
                 const voice = window.speechSynthesis.getVoices().find(v => v.voiceURI == message.content)
-                setUserVoice( voice || window.speechSynthesis.getVoices()[0]);
+                userVoiceURI.current = ( voice?.voiceURI || window.speechSynthesis.getVoices()[0].voiceURI);
             }
             if (message.type === "text-msg") {
                 console.log(message.content);
                 if (ttsEnabledRef.current) {
                     setMessages((messages) => [...messages, message.content]);
-                    /*if (!userVoice) {//explicitly initializes user voice
-                        const voices = window.speechSynthesis.getVoices();
-                        const defaultVoice = new SpeechSynthesisUtterance("default voice fallback");
-                        setUserVoice(voices[0]);
-                        defaultVoice.voice = userVoice;
-                        window.speechSynthesis.speak(defaultVoice);
-                    }*/
                     const utterance = new SpeechSynthesisUtterance(message.content.message)
-                    utterance.voice = userVoice;
+                    utterance.voice = window.speechSynthesis.getVoices().find(v => v.voiceURI == userVoiceURI.current) || window.speechSynthesis.getVoices()[0];
                     window.speechSynthesis.speak(utterance);
                     if (chat) {
                         setSubtitleText(message.content.message);
@@ -373,10 +366,10 @@ const RoomPage: React.FC = () => {
 
     function chooseVoice(index:number) {
         const voice = window.speechSynthesis.getVoices()[index];
-        setUserVoice(voice);
+        userVoiceURI.current = voice.voiceURI;
         if(ttsEnabledBool){//only utter voice if user is hearing
             const utterance = new window.SpeechSynthesisUtterance("Voice was changed to " + voice.name);
-            utterance.voice = voice;
+            utterance.voice = window.speechSynthesis.getVoices().find(v => v.voiceURI == voice.voiceURI) || window.speechSynthesis.getVoices()[0];
             window.speechSynthesis.speak(utterance);
         }
         notification.info({
