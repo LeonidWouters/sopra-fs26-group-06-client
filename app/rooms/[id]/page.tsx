@@ -2,7 +2,7 @@
 
 import React, {useEffect, useRef, useState} from 'react';
 import {useParams, useRouter} from 'next/navigation';
-import {Button, Form, Input, Segmented, Spin, Drawer, Modal, Popover, Select, notification} from "antd";
+import {Button, Drawer, Form, Input, Modal, notification, Popover, Segmented, Select, Spin} from "antd";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
@@ -10,7 +10,7 @@ import dynamic from 'next/dynamic';
 import {User} from "@/types/user";
 import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
-import {CloseCircleOutlined, SoundOutlined, AudioOutlined, AudioMutedOutlined} from "@ant-design/icons";
+import {AudioMutedOutlined, AudioOutlined, CloseCircleOutlined, SoundOutlined} from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
 
 
@@ -57,6 +57,72 @@ const RoomPage: React.FC = () => {
     const [isMuted, setIsMuted] = useState<boolean>(false);
     const [remoteMuted, setRemoteMuted] = useState<boolean>(false);
     const [editorTimeout,setEditorTimeout] = useState<boolean>(false);
+    const [sttEnabledBool, setSttEnabledBool] = useState<boolean>(false);
+    const [lang,setLang] = useState<string>("en-GB");
+    const langRef = useRef<string>(lang)
+
+    const langs = [['Afrikaans',       ['af-ZA']],
+        ['Bahasa Indonesia',['id-ID']],
+        ['Bahasa Melayu',   ['ms-MY']],
+        ['Català',          ['ca-ES']],
+        ['Čeština',         ['cs-CZ']],
+        ['Deutsch',         ['de-DE']],
+        ['English',         ['en-AU', 'Australia'],
+            ['en-CA', 'Canada'],
+            ['en-IN', 'India'],
+            ['en-NZ', 'New Zealand'],
+            ['en-ZA', 'South Africa'],
+            ['en-GB', 'United Kingdom'],
+            ['en-US', 'United States']],
+        ['Español',         ['es-AR', 'Argentina'],
+            ['es-BO', 'Bolivia'],
+            ['es-CL', 'Chile'],
+            ['es-CO', 'Colombia'],
+            ['es-CR', 'Costa Rica'],
+            ['es-EC', 'Ecuador'],
+            ['es-SV', 'El Salvador'],
+            ['es-ES', 'España'],
+            ['es-US', 'Estados Unidos'],
+            ['es-GT', 'Guatemala'],
+            ['es-HN', 'Honduras'],
+            ['es-MX', 'México'],
+            ['es-NI', 'Nicaragua'],
+            ['es-PA', 'Panamá'],
+            ['es-PY', 'Paraguay'],
+            ['es-PE', 'Perú'],
+            ['es-PR', 'Puerto Rico'],
+            ['es-DO', 'República Dominicana'],
+            ['es-UY', 'Uruguay'],
+            ['es-VE', 'Venezuela']],
+        ['Euskara',         ['eu-ES']],
+        ['Français',        ['fr-FR']],
+        ['Galego',          ['gl-ES']],
+        ['Hrvatski',        ['hr_HR']],
+        ['IsiZulu',         ['zu-ZA']],
+        ['Íslenska',        ['is-IS']],
+        ['Italiano',        ['it-IT', 'Italia'],
+            ['it-CH', 'Svizzera']],
+        ['Magyar',          ['hu-HU']],
+        ['Nederlands',      ['nl-NL']],
+        ['Norsk bokmål',    ['nb-NO']],
+        ['Polski',          ['pl-PL']],
+        ['Português',       ['pt-BR', 'Brasil'],
+            ['pt-PT', 'Portugal']],
+        ['Română',          ['ro-RO']],
+        ['Slovenčina',      ['sk-SK']],
+        ['Suomi',           ['fi-FI']],
+        ['Svenska',         ['sv-SE']],
+        ['Türkçe',          ['tr-TR']],
+        ['български',       ['bg-BG']],
+        ['Pусский',         ['ru-RU']],
+        ['Српски',          ['sr-RS']],
+        ['한국어',            ['ko-KR']],
+        ['中文',             ['cmn-Hans-CN', '普通话 (中国大陆)'],
+            ['cmn-Hans-HK', '普通话 (香港)'],
+            ['cmn-Hant-TW', '中文 (台灣)'],
+            ['yue-Hant-HK', '粵語 (香港)']],
+        ['日本語',           ['ja-JP']],
+        ['Lingua latīna',   ['la']]];
 
     interface textMsg {
         message: string;
@@ -440,8 +506,11 @@ const RoomPage: React.FC = () => {
             setChat(true);
             return;
         }
+        setSttEnabledBool(true);
         speechRef.current.continuous = true;
         speechRef.current.interimResults = true;
+        speechRef.current.lang = langRef.current;
+        console.log(lang);
         speechRef.current.start();
         console.log(speechRef.current);
 
@@ -465,11 +534,15 @@ const RoomPage: React.FC = () => {
         };
 
         speechRef.current.onaudioend = () => {//after pause in speech, send message to be appended in chat for later lookup
+            if(sentence.trim() !== "")
+            {
                 sendText(sentence);
+            }
         }
 
         speechRef.current.onend = () => {
-            setTimeout(() => speechRef.current?.start(), 1000);
+            if(speechRef.current){speechRef.current.lang = langRef.current;}
+            setTimeout(() => speechRef.current?.start(), 10000);
         }
 
         speechRef.current.onerror = () => {
@@ -549,6 +622,23 @@ const RoomPage: React.FC = () => {
             ;
         }
     }, [apiService, token, isReady]);
+
+    function chooseLang(index: number) {
+        const lang = langs[index][1][0];
+        setLang(lang);
+        langRef.current = lang;
+        if(speechRef.current) {
+            speechRef.current.stop();
+            speechRef.current.lang = lang;
+
+            notification.info({
+                title: "Language changed",
+                description: `Language was changed to ${langs[index][0]}`,
+                placement: "top",
+                duration: 2,
+            });
+        }
+    }
 
     return (
         <div style={{display: "flex", flexDirection: "column", width: "100%", height: "100vh"}}>
@@ -730,6 +820,24 @@ const RoomPage: React.FC = () => {
                         >
                         <Button  style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
                     </Popover> : null}
+                        {sttEnabledBool ? <Popover
+                            trigger="click"
+                            title="Chosse recognized language"
+                            content={
+                                <Select
+                                    style={{ width: 400 }}
+                                    defaultValue={0}
+                                    onChange={(index) => chooseLang(index)}
+                                    options={langs.map((language, index) => ({
+                                        label: language[0],
+                                        value: index
+                                    }))}
+                                />
+                            }
+                        >
+                            <Button  style={{margin:"5px 20px", color:"black"}} title={lang} type={"default"}>{lang}</Button>
+                        </Popover> : null}
+
                         <Button
                             shape="circle"
                             icon={isMuted ? <AudioMutedOutlined /> : <AudioOutlined />}
