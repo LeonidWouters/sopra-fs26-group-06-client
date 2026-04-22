@@ -2,7 +2,7 @@
 
 import React, {useEffect, useRef, useState} from 'react';
 import {useParams, useRouter} from 'next/navigation';
-import {Button, Form, Input, Segmented, Spin, Drawer, Modal, Popover, Select, Alert, notification} from "antd";
+import {Button, Form, Input, Segmented, Spin, Drawer, Modal, Popover, Select, notification} from "antd";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
@@ -48,11 +48,12 @@ const RoomPage: React.FC = () => {
     const [subtitleText, setSubtitleText] = useState<string>("");
     const speechRef = useRef<SpeechRecognition>(null);
     const ttsEnabledRef = useRef<boolean>(false);
+    const [ttsEnabledBool,setttsEnabledBool] = useState<boolean>(false);
     const [chat, setChat] = useState<boolean>(false);
     const [chatHistory,setChatHistory] = useState(false);
     const [isCaller, setIsCaller] = useState<boolean>(false);
     const [form] = Form.useForm();
-    const [userVoice,setUserVoice] = useState<SpeechSynthesisVoice>(window.speechSynthesis.getVoices()[0]);
+    const userVoiceURI = useRef<string>("");
     const [isMuted, setIsMuted] = useState<boolean>(false);
     const [remoteMuted, setRemoteMuted] = useState<boolean>(false);
 
@@ -212,22 +213,16 @@ const RoomPage: React.FC = () => {
             }
 
             if (message.type === "voice-type"){
-                const voice = window.speechSynthesis.getVoices().find(v => v.voiceURI === message.content)
-                setUserVoice( voice || window.speechSynthesis.getVoices()[0]);
+                console.log(message.content);
+                const voice = window.speechSynthesis.getVoices().find(v => v.voiceURI == message.content)
+                userVoiceURI.current = ( voice?.voiceURI || window.speechSynthesis.getVoices()[0].voiceURI);
             }
             if (message.type === "text-msg") {
                 console.log(message.content);
-                if (ttsEnabledRef) {
-                    setMessages((messages) => [...messages, message.content]);
-                    if (!userVoice) {//explicitly initializes user voice
-                        const voices = window.speechSynthesis.getVoices();
-                        const defaultVoice = new SpeechSynthesisUtterance("default voice fallback" + voices[0].name);
-                        setUserVoice(voices[0]);
-                        defaultVoice.voice = userVoice;
-                        window.speechSynthesis.speak(defaultVoice);
-                    }
+                setMessages((messages) => [...messages, message.content]);
+                if (ttsEnabledRef.current) {
                     const utterance = new SpeechSynthesisUtterance(message.content.message)
-                    utterance.voice = userVoice;
+                    utterance.voice = window.speechSynthesis.getVoices().find(v => v.voiceURI == userVoiceURI.current) || window.speechSynthesis.getVoices()[0];
                     window.speechSynthesis.speak(utterance);
                     if (chat) {
                         setSubtitleText(message.content.message);
@@ -249,6 +244,11 @@ const RoomPage: React.FC = () => {
 
         return () => {
             socket.close(1000, "component unmounted");
+            if (speechRef.current) {
+                speechRef.current.onend = null;//ensures no wrong callbacks get triggred
+                speechRef.current.onaudioend = null;
+                speechRef.current.stop();
+            }
         };
     }, [apiService, token, isReady]);
 
@@ -366,10 +366,10 @@ const RoomPage: React.FC = () => {
 
     function chooseVoice(index:number) {
         const voice = window.speechSynthesis.getVoices()[index];
-        setUserVoice(voice);
-        if(disabilityStatusLocal == "HEARING"){//only utter voice if user is hearing
+        userVoiceURI.current = voice.voiceURI;
+        if(ttsEnabledBool){//only utter voice if user is hearing
             const utterance = new window.SpeechSynthesisUtterance("Voice was changed to " + voice.name);
-            utterance.voice = voice;
+            utterance.voice = window.speechSynthesis.getVoices().find(v => v.voiceURI == voice.voiceURI) || window.speechSynthesis.getVoices()[0];
             window.speechSynthesis.speak(utterance);
         }
         notification.info({
@@ -451,13 +451,7 @@ const RoomPage: React.FC = () => {
         }
 
         speechRef.current.onend = () => {
-            if(speechRef.current == null){
-                startSTT();
-            }
-            else {
-                setTimeout((speechRef) => speechRef.current.start(), 1000);
-            }
-
+            setTimeout(() => speechRef.current?.start(), 1000);
         }
 
         speechRef.current.onerror = () => {
@@ -469,6 +463,7 @@ const RoomPage: React.FC = () => {
 
     function startTTS() {
         ttsEnabledRef.current = true;
+        setttsEnabledBool(true);
     }
 
     useEffect(() => {
@@ -714,7 +709,7 @@ const RoomPage: React.FC = () => {
                         />
                         }
                         >
-                        <Button hidden={ttsEnabledRef.current} style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
+                        <Button hidden={!ttsEnabledBool} style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
                     </Popover>
                         <Button
                             shape="circle"
