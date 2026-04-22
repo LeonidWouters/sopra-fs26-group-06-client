@@ -45,6 +45,7 @@ const HomePage: React.FC = () => {
     const [privateRoomDesc, setPrivateRoomDesc] = useState("");
     const [inviteeUsername, setInviteeUsername] = useState<string | null>(null);
     const [notifiedRoomIds, setNotifiedRoomIds] = useState<number[]>([]);
+    const [friends, setFriends] = useState<User[]>([]);
     const showModal = () => {
         setIsModalOpen(true);
     };
@@ -92,6 +93,9 @@ const HomePage: React.FC = () => {
 
                 const fetchedUsers: User[] = await apiService.get<User[]>("/users", token);
                 setUsers((prev) => JSON.stringify(prev) === JSON.stringify(fetchedUsers) ? prev : fetchedUsers);
+
+                const fetchedFriends: User[] = await apiService.get<User[]>(`/users/${parsedId}/friends`, token);
+                setFriends(fetchedFriends);
                 console.log("Fetched users:", fetchedUsers);
             } catch (error) {
                 console.error("Error fetching data in background:", error);
@@ -241,7 +245,7 @@ const HomePage: React.FC = () => {
                                 onChange={value => setInviteeUsername(value)}
                                 style={{ width: "100%" }}
                             >
-                                {users.filter(u => u.id && (user?.friends || []).map(String).includes(String(u.id))).map(friend => (
+                                {users.filter(u => u.id && friends.some(f => String(f.id) === String(u.id))).map(friend => (
                                     <Select.Option key={friend.id} value={friend.username}>
                                         {friend.name} (@{friend.username})
                                     </Select.Option>
