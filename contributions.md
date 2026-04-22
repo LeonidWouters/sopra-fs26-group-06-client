@@ -104,9 +104,10 @@ reason).
 
 ## Contributions Week 5 - 20.04.2026 to 27.04.2026
 
-| Student     |Date|Link to Commit|Description|Relevance|
-|-------------|-----------|----------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Raff05B** | 22.04.2026 |https://github.com/LeonidWouters/sopra-fs26-group-06-client/pull/89 |fix ws handling of tts + major bug fixes for sending and dispalying messages and voices| Critical bug fixes and usability improvment                                                                                                                      |
+| Student     | Date        | Link to Commit                                                       | Description                                                                             | Relevance                                                                               |
+|-------------|-------------|----------------------------------------------------------------------|-----------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| **Raff05B** | 22.04.2026  | https://github.com/LeonidWouters/sopra-fs26-group-06-client/pull/89  | fix ws handling of tts + major bug fixes for sending and dispalying messages and voices | Critical bug fixes and usability improvment                                             |
+|             | 22.04.2026  | https://github.com/LeonidWouters/sopra-fs26-group-06-client/pull/92  | adds 10s set timeout                                                                    | ensures no constant changing inbetween editing, avoids on purpose lockout by other user |
 
 
 ---

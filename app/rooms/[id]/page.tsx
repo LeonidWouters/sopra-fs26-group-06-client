@@ -67,14 +67,31 @@ const RoomPage: React.FC = () => {
     const leaveRoom = async (): Promise<void> => {
         peerConnectionRef.current?.close();
         peerConnectionRef.current = null;
+        const sessionId = crypto.randomUUID();
+        let transcript = "";
+        for (const m of messages) {
+            transcript+= m.timestamp + " : " + m.message + "\n\n";
+        }
+        if(transcript != "" && callStarted){
+            try {
+                await apiService.post("/transcripts",{
+                    content: transcript,
+                    sessionId: sessionId
+                },token)
+                console.log(messages);
+            }
+            catch (error) {                console.error("Couldnt save transcript:", error);
+            }
+        }
 
         if (markdownText.trim() !== "" && callStarted) {
             try {
-                const sessionId = crypto.randomUUID();
+
                 await apiService.post("/notes", {
                     content: markdownText,
                     sessionId: sessionId
                 }, token);
+                console.log(markdownText);
 
             } catch (error) {
                 console.error("Couldnt save notes:", error);
@@ -500,6 +517,7 @@ const RoomPage: React.FC = () => {
                 startTTS();
             }
             if (disabilityStatusLocal == "HEARING" && disabilityStatusRemote == "HEARING") {
+                setttsEnabledBool(false);
                 console.log("do nothing")
             }
             if (disabilityStatusLocal == "DEAF" && disabilityStatusRemote == "HEARING") {
@@ -695,7 +713,7 @@ const RoomPage: React.FC = () => {
                             <Button type="default" onClick={loadChat}>show chat history</Button>
                         </div>
                     <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
-                        <Popover
+                        {ttsEnabledBool ? <Popover
                             trigger="click"
                             title="Choose a Voice"
                             content={
@@ -710,8 +728,8 @@ const RoomPage: React.FC = () => {
                         />
                         }
                         >
-                        <Button hidden={!ttsEnabledBool} style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
-                    </Popover>
+                        <Button  style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
+                    </Popover> : null}
                         <Button
                             shape="circle"
                             icon={isMuted ? <AudioMutedOutlined /> : <AudioOutlined />}
