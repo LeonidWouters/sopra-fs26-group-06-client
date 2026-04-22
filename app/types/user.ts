@@ -10,4 +10,5 @@ export interface User {
   disabilityStatus: "HEARING" | "DEAF" | null;
   friendCount: number | null;
   friends?: number[];
+  pendingFriendRequests?: number[];
 }
