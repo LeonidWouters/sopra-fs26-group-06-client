@@ -434,7 +434,7 @@ const RoomPage: React.FC = () => {
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 message += event.results[i][0].transcript;
 
-                if (event.results[i].isFinal) {
+                if (event.results[i].isFinal && event.results[i][0].transcript != "") {
                     console.log("Final transcript:", message);
                     sentence += message;
                     if (wsRef.current?.readyState === WebSocket.OPEN) {
