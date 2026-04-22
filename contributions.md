@@ -102,9 +102,12 @@ reason).
 
 ---
 
-## Contributions Week 5 - [Begin Date] to [End Date]
+## Contributions Week 5 - 20.04.2026 to 27.04.2026
 
-_Continue with the same table format as above._
+| Student     |Date|Link to Commit|Description|Relevance|
+|-------------|-----------|----------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Raff05B** | 22.04.2026 |https://github.com/LeonidWouters/sopra-fs26-group-06-client/pull/89 |fix ws handling of tts + major bug fixes for sending and dispalying messages and voices| Critical bug fixes and usability improvment                                                                                                                      |
+
 
 ---
 
