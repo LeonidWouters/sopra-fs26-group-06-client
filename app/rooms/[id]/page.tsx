@@ -56,6 +56,7 @@ const RoomPage: React.FC = () => {
     const userVoiceURI = useRef<string>("");
     const [isMuted, setIsMuted] = useState<boolean>(false);
     const [remoteMuted, setRemoteMuted] = useState<boolean>(false);
+    const [editorTimeout,setEditorTimeout] = useState<boolean>(false);
 
     interface textMsg {
         message: string;
@@ -433,7 +434,7 @@ const RoomPage: React.FC = () => {
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 message += event.results[i][0].transcript;
 
-                if (event.results[i].isFinal) {
+                if (event.results[i].isFinal && event.results[i][0].transcript != "") {
                     console.log("Final transcript:", message);
                     sentence += message;
                     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -741,7 +742,10 @@ const RoomPage: React.FC = () => {
                         <Segmented
                             options={participants}
                             value={activeEditor}
+                            disabled={editorTimeout}
                             onChange={(value) => {
+                                setEditorTimeout(true);
+                                setTimeout(() => setEditorTimeout(false), 10000);
                                 const newEditor = value as string;
                                 setActiveEditor(newEditor);
                                 if (wsRef.current?.readyState === WebSocket.OPEN) {
