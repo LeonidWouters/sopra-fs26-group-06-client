@@ -219,8 +219,8 @@ const RoomPage: React.FC = () => {
             }
             if (message.type === "text-msg") {
                 console.log(message.content);
+                setMessages((messages) => [...messages, message.content]);
                 if (ttsEnabledRef.current) {
-                    setMessages((messages) => [...messages, message.content]);
                     const utterance = new SpeechSynthesisUtterance(message.content.message)
                     utterance.voice = window.speechSynthesis.getVoices().find(v => v.voiceURI == userVoiceURI.current) || window.speechSynthesis.getVoices()[0];
                     window.speechSynthesis.speak(utterance);
