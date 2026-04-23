@@ -466,16 +466,20 @@ const RoomPage: React.FC = () => {
         };
 
         speechRef.current.onaudioend = () => {//after pause in speech, send message to be appended in chat for later lookup
+            if(sentence.trim() !== ""){
                 sendText(sentence);
+            }
+
+            sentence = "";
         }
 
         speechRef.current.onend = () => {
-            setTimeout(() => speechRef.current?.start(), 1000);
+            setTimeout(() => speechRef.current?.start(), 500);
         }
 
-        speechRef.current.onerror = () => {
+        /*speechRef.current.onerror = () => {
             startSTT();
-        }
+        }*/
 
     }
 
