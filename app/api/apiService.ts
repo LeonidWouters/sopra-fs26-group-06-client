@@ -130,7 +130,11 @@ class ApiService {
    * @param endpoint - The API endpoint (e.g. "/users/123").
    * @returns JSON data of type T.
    */
-  public async delete<T>(endpoint: string): Promise<T> {
+  public async delete<T>(
+      endpoint: string,
+      token: string
+): Promise<T> {
+    this.defaultHeaders["token"] = token;
     const url = `${this.baseURL}${endpoint}`;
     const res = await fetch(url, {
       method: "DELETE",
