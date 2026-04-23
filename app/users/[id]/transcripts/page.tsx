@@ -69,7 +69,7 @@ const TranscriptsPage: React.FC = () => {
             ? `/transcripts/${item.id}`
             : `/notes/${item.id}`;
         try {
-            await apiService.delete(endpoint);
+            await apiService.delete(endpoint, token);
             setItems((prev) => prev.filter((i) => i.id !== item.id || i.kind !== item.kind));
         } catch {
             // silently ignore
