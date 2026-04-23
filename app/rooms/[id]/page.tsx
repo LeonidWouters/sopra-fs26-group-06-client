@@ -67,6 +67,9 @@ const RoomPage: React.FC = () => {
     const leaveRoom = async (): Promise<void> => {
         peerConnectionRef.current?.close();
         peerConnectionRef.current = null;
+        speechRef.current?.stop();
+        const stream = clientRef.current?.srcObject as MediaStream | null;
+        stream?.getTracks().forEach(track => track.stop());
         const sessionId = crypto.randomUUID();
         let transcript = "";
         for (const m of messages) {
@@ -432,7 +435,6 @@ const RoomPage: React.FC = () => {
         if (speechRef.current) {
             speechRef.current.stop();
         }
-        let sentence = "";
 
         speechRef.current = new SpeechRecognition() || new window.webkitSpeechRecognition; //get speech recognition object based on browser
 
@@ -454,32 +456,27 @@ const RoomPage: React.FC = () => {
 
                 if (event.results[i].isFinal && event.results[i][0].transcript != "") {
                     console.log("Final transcript:", message);
-                    sentence += message;
                     if (wsRef.current?.readyState === WebSocket.OPEN) {
                         wsRef.current.send(JSON.stringify({
                             type: "speech-to-text",
                             content: message
                         }));
+                        sendText(message);
                     }
                 }
             }
         };
 
-        speechRef.current.onaudioend = () => {//after pause in speech, send message to be appended in chat for later lookup
-            if(sentence.trim() !== ""){
-                sendText(sentence);
-            }
-
-            sentence = "";
-        }
-
         speechRef.current.onend = () => {
             setTimeout(() => speechRef.current?.start(), 500);
         }
 
-        /*speechRef.current.onerror = () => {
-            startSTT();
-        }*/
+        speechRef.current.onerror = (event) => {
+            console.log(event.error);
+            if(event.error === "network" || event.error === "no-speech" || event.error === "aborted"){
+                setTimeout(() => speechRef.current?.start(), 500);
+            }
+        }
 
     }
 
