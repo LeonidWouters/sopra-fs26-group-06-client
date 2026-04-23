@@ -57,6 +57,9 @@ const RoomPage: React.FC = () => {
     const [isMuted, setIsMuted] = useState<boolean>(false);
     const [remoteMuted, setRemoteMuted] = useState<boolean>(false);
     const [editorTimeout,setEditorTimeout] = useState<boolean>(false);
+    const [isMediaReady, setIsMediaReady] = useState(false);
+    const [incomingOffer, setIncomingOffer] = useState<RTCSessionDescriptionInit | null>(null);
+    const pendingCandidates = useRef<any[]>([]);
 
     interface textMsg {
         message: string;
@@ -189,7 +192,7 @@ const RoomPage: React.FC = () => {
     }, [apiService, id, isReady, token, myUserId]);
 
     useEffect(() => {
-        if (occupancy === 2) {
+        if (occupancy === 2 && isMediaReady) {
             setCallStarted(true);
 
             if (!peerConnectionRef.current && isCaller) {
@@ -199,7 +202,27 @@ const RoomPage: React.FC = () => {
             leaveRoom();
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [occupancy, isCaller, callStarted]);
+    }, [occupancy, isCaller, callStarted, isMediaReady]);
+
+    useEffect(() => {
+        if (incomingOffer && isMediaReady) {
+            const processOffer = async () => {
+                await answerCall(incomingOffer);
+                setIncomingOffer(null);
+
+                for (const candidate of pendingCandidates.current) {
+                    try {
+                        await peerConnectionRef.current?.addIceCandidate(candidate);
+                    } catch (e) {
+                        console.error("Failed to add buffered ICE candidate", e);
+                    }
+                }
+                pendingCandidates.current = [];
+            };
+            processOffer();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [incomingOffer, isMediaReady]);
 
     useEffect(() => {
         if (!isReady) return;
@@ -215,7 +238,7 @@ const RoomPage: React.FC = () => {
             const message = JSON.parse(event.data);
 
             if (message.type === "offer") {
-                await answerCall(message.offer);
+                setIncomingOffer(message.offer);
             }
 
             if (message.type === "answer") {
@@ -223,7 +246,11 @@ const RoomPage: React.FC = () => {
             }
 
             if (message.type === "ice-candidate") {
-                await peerConnectionRef.current?.addIceCandidate(message.candidate);
+                if (peerConnectionRef.current) {
+                    await peerConnectionRef.current.addIceCandidate(message.candidate);
+                } else {
+                    pendingCandidates.current.push(message.candidate);
+                }
             }
 
             if (message.type === "markdown-update") {
@@ -538,6 +565,7 @@ const RoomPage: React.FC = () => {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
                 clientRef.current!.srcObject = stream;
+                setIsMediaReady(true);
             } catch (error) {
                 console.error("Error accessing media devices.", error);
             }
