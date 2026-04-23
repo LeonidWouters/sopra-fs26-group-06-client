@@ -37,6 +37,7 @@ const HomePage: React.FC = () => {
     // Modal & User States
     const [userId, setUserId] = useState<string | null>(null);
     const [users, setUsers] = useState<User[]>([]);
+    const [friends, setFriends] = useState<User[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -93,6 +94,13 @@ const HomePage: React.FC = () => {
                 const fetchedUsers: User[] = await apiService.get<User[]>("/users", token);
                 setUsers((prev) => JSON.stringify(prev) === JSON.stringify(fetchedUsers) ? prev : fetchedUsers);
                 console.log("Fetched users:", fetchedUsers);
+
+                const fetchedFriends: User[] = await apiService.get<User[]>(`/users/${parsedId}/friends`, token);
+                const oldFriends = JSON.stringify(friends);
+                const newFriends = JSON.stringify(fetchedFriends);
+                if (oldFriends !== newFriends) {
+                    setFriends(fetchedFriends);
+                }
             } catch (error) {
                 console.error("Error fetching data in background:", error);
             }
@@ -241,7 +249,7 @@ const HomePage: React.FC = () => {
                                 onChange={value => setInviteeUsername(value)}
                                 style={{ width: "100%" }}
                             >
-                                {users.filter(u => u.id && (user?.friends || []).map(String).includes(String(u.id))).map(friend => (
+                                {friends.map(friend => (
                                     <Select.Option key={friend.id} value={friend.username}>
                                         {friend.name} (@{friend.username})
                                     </Select.Option>
