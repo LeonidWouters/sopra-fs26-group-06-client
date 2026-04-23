@@ -102,9 +102,14 @@ reason).
 
 ---
 
-## Contributions Week 5 - [Begin Date] to [End Date]
+## Contributions Week 5 - 20.04.2026 to 27.04.2026
 
-_Continue with the same table format as above._
+| Student     | Date        | Link to Commit                                                       | Description                                                                             | Relevance                                                                               |
+|-------------|-------------|----------------------------------------------------------------------|-----------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| **Raff05B** | 22.04.2026  | https://github.com/LeonidWouters/sopra-fs26-group-06-client/pull/89  | fix ws handling of tts + major bug fixes for sending and dispalying messages and voices | Critical bug fixes and usability improvment                                             |
+|             | 22.04.2026  | https://github.com/LeonidWouters/sopra-fs26-group-06-client/pull/92  | adds 10s set timeout                                                                    | ensures no constant changing inbetween editing, avoids on purpose lockout by other user |
+| **@LeonidWouters** | 23.04.2026  | https://github.com/LeonidWouters/sopra-fs26-group-06-server/pull/94  | Wrote two additional tests to fullfil M3 requirement: UserPutDTOTest and UserPutProfileDTOTest | Is required for M3, each backend task should have at least one test                                            |
+|             | 23.04.2026  | https://github.com/LeonidWouters/sopra-fs26-group-06-client/pull/96  | bugfix: user logout edge cases (on register close) are now handled correctly. if a user closes register, he is logged out. if a user closes register while being in a session, session is closed correctly (flush notes etc.) and user is logged out                                                                | critical bug fix because otherwise there would be inconsistency regarding the status of the user when closing the register |
 
 ---
 

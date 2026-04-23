@@ -48,19 +48,23 @@ const Profile: React.FC = () => {
 
         const fetchUser = async () => {
             try {
-                const user: User = await apiService.get<User>(`/users/${id}`, token);
+                const user = await apiService.get<User>(`/users/${id}`, token);
+                const friendsList = await apiService.get<User[]>(`/users/${id}/friends`, token);
                 setUser(user);
                 setEditUsername(user.username ?? "");
                 setEditBio(user.bio ?? "");
                 setEditDisability(user.disabilityStatus ?? "HEARING");
+                const amIFriend = friendsList.some((friend) => {
+                    return String(friend.id) === String(loggedInId);
+                });
+                setIsFriend(amIFriend);
+                const waitingList = user.pendingFriendRequests ?? [];
+                const requestWasSent = waitingList.some((requestId) => {
+                    return String(requestId) === String(loggedInId);
+                });
+                setRequestSent(requestWasSent);
             } catch (error) {
                 messageApi.open({type: "error", content: "Could not load user."});
-            }
-            try {
-                const friends = await apiService.get<User[]>(`/users/${id}/friends`, token);
-                setIsFriend(friends.some(friend => friend.id === loggedInId)); // checks if friend or not
-            } catch (error) {
-                console.error("Could not load friends:", error);
             }
         };
         fetchUser();
@@ -184,28 +188,38 @@ const Profile: React.FC = () => {
                             {!isOwnProfile && requestSent && (
                                 <Button disabled>Request Sent</Button>
                             )}
-                            <Button
-                                onClick={() => router.push(`/users/${id}/friends`)}
-                                icon={<TeamOutlined/>}
-                                style={{borderRadius: 10, height: 44, padding: "0 24px", fontSize: 15, fontWeight: 500}}
-                            >
-                                Friends
-                            </Button>
-                            <Button
-                                type="primary"
-                                onClick={() => router.push(`/users/${id}/transcripts`)}
-                                style={{
-                                    background: "linear-gradient(90deg, #4f46e5, #7c3aed)",
-                                    border: "none",
-                                    borderRadius: 10,
-                                    height: 44,
-                                    padding: "0 24px",
-                                    fontSize: 15,
-                                    fontWeight: 500,
-                                }}
-                            >
-                                See latest transcripts/notes
-                            </Button>
+                            {isOwnProfile && (
+                                <Button
+                                    onClick={() => router.push(`/users/${id}/friends`)}
+                                    icon={<TeamOutlined/>}
+                                    style={{
+                                        borderRadius: 10,
+                                        height: 44,
+                                        padding: "0 24px",
+                                        fontSize: 15,
+                                        fontWeight: 500
+                                    }}
+                                >
+                                    Friends
+                                </Button>
+                            )}
+                            {isOwnProfile && (
+                                <Button
+                                    type="primary"
+                                    onClick={() => router.push(`/users/${id}/transcripts`)}
+                                    style={{
+                                        background: "linear-gradient(90deg, #4f46e5, #7c3aed)",
+                                        border: "none",
+                                        borderRadius: 10,
+                                        height: 44,
+                                        padding: "0 24px",
+                                        fontSize: 15,
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    See latest transcripts/notes
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>

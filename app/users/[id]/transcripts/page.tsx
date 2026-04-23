@@ -34,9 +34,10 @@ const TranscriptsPage: React.FC = () => {
                 const data = await apiService.get<UserDocumentsGetDTO>(`/users/${id}/documents`, token);
                 const transcripts = (data.transcripts ?? []).map((t) => ({ ...t, kind: "transcript" as const }));
                 const notes = (data.notes ?? []).map((n) => ({ ...n, kind: "note" as const }));
+                console.log(transcripts,notes);
                 setItems([...transcripts, ...notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
-            } catch {
-                // leave items empty — empty state will show
+            } catch(e) {
+                console.log(e);
             } finally {
                 setLoading(false);
             }

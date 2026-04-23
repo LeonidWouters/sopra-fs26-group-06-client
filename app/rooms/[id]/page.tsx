@@ -2,7 +2,7 @@
 
 import React, {useEffect, useRef, useState} from 'react';
 import {useParams, useRouter} from 'next/navigation';
-import {Button, Form, Input, Segmented, Spin, Drawer, Modal, Popover, Select, Alert, notification} from "antd";
+import {Button, Form, Input, Segmented, Spin, Drawer, Modal, Popover, Select, notification} from "antd";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
@@ -10,7 +10,7 @@ import dynamic from 'next/dynamic';
 import {User} from "@/types/user";
 import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
-import {CloseCircleOutlined, SoundOutlined} from "@ant-design/icons";
+import {CloseCircleOutlined, SoundOutlined, AudioOutlined, AudioMutedOutlined} from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
 
 
@@ -48,11 +48,15 @@ const RoomPage: React.FC = () => {
     const [subtitleText, setSubtitleText] = useState<string>("");
     const speechRef = useRef<SpeechRecognition>(null);
     const ttsEnabledRef = useRef<boolean>(false);
+    const [ttsEnabledBool,setttsEnabledBool] = useState<boolean>(false);
     const [chat, setChat] = useState<boolean>(false);
     const [chatHistory,setChatHistory] = useState(false);
     const [isCaller, setIsCaller] = useState<boolean>(false);
     const [form] = Form.useForm();
-    const [userVoice,setUserVoice] = useState<SpeechSynthesisVoice>(window.speechSynthesis.getVoices()[0]);
+    const userVoiceURI = useRef<string>("");
+    const [isMuted, setIsMuted] = useState<boolean>(false);
+    const [remoteMuted, setRemoteMuted] = useState<boolean>(false);
+    const [editorTimeout,setEditorTimeout] = useState<boolean>(false);
 
     interface textMsg {
         message: string;
@@ -63,14 +67,31 @@ const RoomPage: React.FC = () => {
     const leaveRoom = async (): Promise<void> => {
         peerConnectionRef.current?.close();
         peerConnectionRef.current = null;
+        const sessionId = crypto.randomUUID();
+        let transcript = "";
+        for (const m of messages) {
+            transcript+= m.timestamp + " : " + m.message + "\n\n";
+        }
+        if(transcript != "" && callStarted){
+            try {
+                await apiService.post("/transcripts",{
+                    content: transcript,
+                    sessionId: sessionId
+                },token)
+                console.log(messages);
+            }
+            catch (error) {                console.error("Couldnt save transcript:", error);
+            }
+        }
 
         if (markdownText.trim() !== "" && callStarted) {
             try {
-                const sessionId = crypto.randomUUID();
+
                 await apiService.post("/notes", {
                     content: markdownText,
                     sessionId: sessionId
                 }, token);
+                console.log(markdownText);
 
             } catch (error) {
                 console.error("Couldnt save notes:", error);
@@ -80,8 +101,24 @@ const RoomPage: React.FC = () => {
         router.push("/mainpage");
     };
 
+    const toggleMute = () => {
+        const stream = clientRef.current?.srcObject as MediaStream | null;
+        if (stream) {
+            stream.getAudioTracks().forEach(track => {
+                track.enabled = !track.enabled;
+            });
+        }
+        const newMuted = !isMuted;
+        setIsMuted(newMuted);
+        wsRef.current?.send(JSON.stringify({
+            type: "mute-status",
+            muted: newMuted,
+            username: myUsername,
+        }));
+    };
+
     useEffect(() => {
-        if (isReady && !token) router.push("");
+        if (isReady && !token) router.push("/");
     }, [isReady, token]);
 
     useEffect(() => {
@@ -194,22 +231,16 @@ const RoomPage: React.FC = () => {
             }
 
             if (message.type === "voice-type"){
-                const voice = window.speechSynthesis.getVoices().find(v => v.voiceURI === message.content)
-                setUserVoice( voice || window.speechSynthesis.getVoices()[0]);
+                console.log(message.content);
+                const voice = window.speechSynthesis.getVoices().find(v => v.voiceURI == message.content)
+                userVoiceURI.current = ( voice?.voiceURI || window.speechSynthesis.getVoices()[0].voiceURI);
             }
             if (message.type === "text-msg") {
                 console.log(message.content);
-                if (ttsEnabledRef) {
-                    setMessages((messages) => [...messages, message.content]);
-                    if (!userVoice) {//explicitly initializes user voice
-                        const voices = window.speechSynthesis.getVoices();
-                        const defaultVoice = new SpeechSynthesisUtterance("default voice fallback" + voices[0].name);
-                        setUserVoice(voices[0]);
-                        defaultVoice.voice = userVoice;
-                        window.speechSynthesis.speak(defaultVoice);
-                    }
+                setMessages((messages) => [...messages, message.content]);
+                if (ttsEnabledRef.current) {
                     const utterance = new SpeechSynthesisUtterance(message.content.message)
-                    utterance.voice = userVoice;
+                    utterance.voice = window.speechSynthesis.getVoices().find(v => v.voiceURI == userVoiceURI.current) || window.speechSynthesis.getVoices()[0];
                     window.speechSynthesis.speak(utterance);
                     if (chat) {
                         setSubtitleText(message.content.message);
@@ -220,6 +251,9 @@ const RoomPage: React.FC = () => {
             if (message.type === "speech-to-text") {
                 setSubtitleText(message.content);
             }
+            if (message.type === "mute-status") {
+                setRemoteMuted(message.muted);
+            }
         };
 
         socket.onerror = (err) => {
@@ -228,6 +262,11 @@ const RoomPage: React.FC = () => {
 
         return () => {
             socket.close(1000, "component unmounted");
+            if (speechRef.current) {
+                speechRef.current.onend = null;//ensures no wrong callbacks get triggred
+                speechRef.current.onaudioend = null;
+                speechRef.current.stop();
+            }
         };
     }, [apiService, token, isReady]);
 
@@ -265,31 +304,31 @@ const RoomPage: React.FC = () => {
 
         const session = new RTCPeerConnection({
             iceServers: [
-            {
-                urls: "stun:stun.relay.metered.ca:80",
-            },
-            {
-                urls: "turn:global.relay.metered.ca:80",
-                username: "8bcbccaceecd36e3d8c8397e",
-                credential: "5U5bBTpdZ4mp8xfp",
-            },
-            {
-                urls: "turn:global.relay.metered.ca:80?transport=tcp",
-                username: "8bcbccaceecd36e3d8c8397e",
-                credential: "5U5bBTpdZ4mp8xfp",
-            },
-            {
-                urls: "turn:global.relay.metered.ca:443",
-                username: "8bcbccaceecd36e3d8c8397e",
-                credential: "5U5bBTpdZ4mp8xfp",
-            },
-            {
-                urls: "turns:global.relay.metered.ca:443?transport=tcp",
-                username: "8bcbccaceecd36e3d8c8397e",
-                credential: "5U5bBTpdZ4mp8xfp",
-            },
-        ],
-    }); //start
+                {
+                    urls: "stun:stun.relay.metered.ca:80",
+                },
+                {
+                    urls: "turn:standard.relay.metered.ca:80",
+                    username: "a2b6d3c83dc1a75633bfe850",
+                    credential: "ZMCzjBW7CK114eO4",
+                },
+                {
+                    urls: "turn:standard.relay.metered.ca:80?transport=tcp",
+                    username: "a2b6d3c83dc1a75633bfe850",
+                    credential: "ZMCzjBW7CK114eO4",
+                },
+                {
+                    urls: "turn:standard.relay.metered.ca:443",
+                    username: "a2b6d3c83dc1a75633bfe850",
+                    credential: "ZMCzjBW7CK114eO4",
+                },
+                {
+                    urls: "turns:standard.relay.metered.ca:443?transport=tcp",
+                    username: "a2b6d3c83dc1a75633bfe850",
+                    credential: "ZMCzjBW7CK114eO4",
+                },
+            ],
+        }); //start
         peerConnectionRef.current = session;
 
         const ownStream = clientRef.current?.srcObject as MediaStream | null;  //kamera added
@@ -345,10 +384,10 @@ const RoomPage: React.FC = () => {
 
     function chooseVoice(index:number) {
         const voice = window.speechSynthesis.getVoices()[index];
-        setUserVoice(voice);
-        if(disabilityStatusLocal == "HEARING"){//only utter voice if user is hearing
+        userVoiceURI.current = voice.voiceURI;
+        if(ttsEnabledBool){//only utter voice if user is hearing
             const utterance = new window.SpeechSynthesisUtterance("Voice was changed to " + voice.name);
-            utterance.voice = voice;
+            utterance.voice = window.speechSynthesis.getVoices().find(v => v.voiceURI == voice.voiceURI) || window.speechSynthesis.getVoices()[0];
             window.speechSynthesis.speak(utterance);
         }
         notification.info({
@@ -412,7 +451,7 @@ const RoomPage: React.FC = () => {
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 message += event.results[i][0].transcript;
 
-                if (event.results[i].isFinal) {
+                if (event.results[i].isFinal && event.results[i][0].transcript != "") {
                     console.log("Final transcript:", message);
                     sentence += message;
                     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -430,13 +469,7 @@ const RoomPage: React.FC = () => {
         }
 
         speechRef.current.onend = () => {
-            if(speechRef.current == null){
-                startSTT();
-            }
-            else {
-                setTimeout((speechRef) => speechRef.current.start(), 1000);
-            }
-
+            setTimeout(() => speechRef.current?.start(), 1000);
         }
 
         speechRef.current.onerror = () => {
@@ -448,6 +481,7 @@ const RoomPage: React.FC = () => {
 
     function startTTS() {
         ttsEnabledRef.current = true;
+        setttsEnabledBool(true);
     }
 
     useEffect(() => {
@@ -483,6 +517,7 @@ const RoomPage: React.FC = () => {
                 startTTS();
             }
             if (disabilityStatusLocal == "HEARING" && disabilityStatusRemote == "HEARING") {
+                setttsEnabledBool(false);
                 console.log("do nothing")
             }
             if (disabilityStatusLocal == "DEAF" && disabilityStatusRemote == "HEARING") {
@@ -648,19 +683,37 @@ const RoomPage: React.FC = () => {
                                 {subtitleText}
                             </div>
                         )}
+                        {remoteMuted && (
+                            <div style={{
+                                position: "absolute",
+                                top: "16px",
+                                right: "16px",
+                                backgroundColor: "rgba(239, 68, 68, 0.85)",
+                                color: "#ffffff",
+                                padding: "6px 14px",
+                                borderRadius: "8px",
+                                fontSize: "13px",
+                                fontWeight: 600,
+                            }}>
+                                {`@${participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner"} is muted`}
+                            </div>
+                        )}
                     </div>
 
-                    <div style={{padding: "12px 24px", borderTop: "1px solid #e5e7eb"}}>
-                        <Form form = {form} onFinish={(values) => {
-                            sendText(values.message);
-                            form.resetFields();
-                        }} layout="inline">
-                            <Form.Item name="message" style={{flex: 1, marginBottom: 0}} hidden={!chat}>
-                                <Input placeholder="Press enter to submit" />
-                            </Form.Item>
-                        </Form>
-                        <Button type ="default" onClick={loadChat}>show chat history</Button>
-                        <Popover
+                    <div style={{padding: "12px 24px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center"}}>
+                        <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
+                            <Form form = {form} onFinish={(values) => {
+                                sendText(values.message);
+                                form.resetFields();
+                            }} layout="inline">
+                                <Form.Item name="message" style={{flex: 1, marginBottom: 0}} hidden={!chat}>
+                                    <Input placeholder="Press enter to submit" />
+                                </Form.Item>
+                            </Form>
+                            <Button type="default" onClick={loadChat}>show chat history</Button>
+                        </div>
+                    <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
+                        {ttsEnabledBool ? <Popover
                             trigger="click"
                             title="Choose a Voice"
                             content={
@@ -675,14 +728,25 @@ const RoomPage: React.FC = () => {
                         />
                         }
                         >
-                        <Button hidden={ttsEnabledRef.current} style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
-                    </Popover>
+                        <Button  style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
+                    </Popover> : null}
+                        <Button
+                            shape="circle"
+                            icon={isMuted ? <AudioMutedOutlined /> : <AudioOutlined />}
+                            onClick={toggleMute}
+                            style={{
+                                backgroundColor: isMuted ? "#ef4444" : "#6B21D6",
+                                color: "white",
+                                border: "none",
+                            }}
+                        />
+                    </div>
                         <Drawer title = "Chat History" open={chatHistory} onClose={closeChat} placement={"left"} mask={false}>
                             {messages.map((msg, index) => <div key={index}
-                            style={{padding: "8px 12px", marginBottom: "8px", backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: "8px", color : "white", justifyContent : msg.client ? "flex-start" : "flex-end"}}>
-                            {msg.timestamp + " : " + msg.message}</div>)}
+                                                               style={{padding: "8px 12px", marginBottom: "8px", backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: "8px", color : "white", justifyContent : msg.client ? "flex-start" : "flex-end"}}>
+                                {msg.timestamp + " : " + msg.message}</div>)}
                         </Drawer>
-                    </div>
+                </div>
                 </div>
                 <div style={{flex: 1, padding: "24px", display: "flex", flexDirection: "column"}}>
                     <div style={{
@@ -696,7 +760,10 @@ const RoomPage: React.FC = () => {
                         <Segmented
                             options={participants}
                             value={activeEditor}
+                            disabled={editorTimeout}
                             onChange={(value) => {
+                                setEditorTimeout(true);
+                                setTimeout(() => setEditorTimeout(false), 10000);
                                 const newEditor = value as string;
                                 setActiveEditor(newEditor);
                                 if (wsRef.current?.readyState === WebSocket.OPEN) {
