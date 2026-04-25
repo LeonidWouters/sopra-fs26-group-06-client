@@ -36,6 +36,8 @@ const FriendsPage: React.FC = () => {
             }
         };
         load();
+        const interval = setInterval(load, 3000);
+        return () => clearInterval(interval);
     }, [apiService, isReady, token, id, router, isOwnProfile]);
 
     const handleAccept = async (senderId: string) => {
@@ -64,7 +66,7 @@ const FriendsPage: React.FC = () => {
                            onClick={() => router.push("/mainpage")}/>
                 </div>
                 <div className={mainStyles.navButtons}>
-                    <Button color="default" variant="text" onClick={() => router.push(`/users/${id}`)}>← Back</Button>
+                    <Button color="default" variant="text" onClick={() => router.push(`/mainpage`)}>← Back</Button>
                     <Button color="danger" variant="text" icon={<LogoutOutlined/>} onClick={() => {
                         apiService.put("/users/logout", null, token);
                         clearToken();
