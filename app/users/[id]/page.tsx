@@ -8,7 +8,7 @@ import useLocalStorage from "@/hooks/useLocalStorage";
 import {useAuth} from "@/hooks/useAuth";
 import mainStyles from "@/styles/mainpage.module.css";
 import profileStyles from "@/styles/profile.module.css";
-import {LogoutOutlined, TeamOutlined} from "@ant-design/icons";
+import {LogoutOutlined} from "@ant-design/icons";
 import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 import Image from "next/image";
 import {PasswordInput} from "antd-password-input-strength";
@@ -187,21 +187,6 @@ const Profile: React.FC = () => {
                             )}
                             {!isOwnProfile && requestSent && (
                                 <Button disabled>Request Sent</Button>
-                            )}
-                            {isOwnProfile && (
-                                <Button
-                                    onClick={() => router.push(`/users/${id}/friends`)}
-                                    icon={<TeamOutlined/>}
-                                    style={{
-                                        borderRadius: 10,
-                                        height: 44,
-                                        padding: "0 24px",
-                                        fontSize: 15,
-                                        fontWeight: 500
-                                    }}
-                                >
-                                    Friends
-                                </Button>
                             )}
                             {isOwnProfile && (
                                 <Button
