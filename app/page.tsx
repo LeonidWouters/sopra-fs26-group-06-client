@@ -108,24 +108,49 @@ const Login: React.FC = () => {
 
     return (
         <div className="login-container">
-            <div className="auth-card">
+            <div className="login-left-panel">
                 <Image
-                    src={authMode === "login" ? "/unnamed-Photoroom Kopie.png" : "/unnamed-Photoroom.png"}
-                    alt="Next.js logo"
-                    width={300}
-                    height={140}
-                    style={{
-                        width: "100%",
-                        maxWidth: "300px",
-                        height: "auto",
-                        maxHeight: "140px",
-                        display: "block",
-                        margin: "0 auto",
-                        transform: authMode === "login" ? "scale(1.4)" : "scale(0.8)",
-                        marginBottom: authMode === "login" ? "25px" : "20px"
-                    }}
-
+                    src="/unnamed-Photoroom.png"
+                    alt="ComunicALL"
+                    width={180}
+                    height={50}
+                    style={{width: "auto", maxWidth: "180px", height: "auto", maxHeight: "50px"}}
                 />
+                <h1>Accessible calls,<br/>for everyone.</h1>
+                <p>Real-time subtitles, shared notes and transcripts — built for deaf and hearing users.</p>
+                <div className="login-feature">
+                    <div className="login-feature-icon">🎙️</div>
+                    <div className="login-feature-text">
+                        <strong>Live subtitles</strong>
+                        <span>Speech-to-text transcribed during every call</span>
+                    </div>
+                </div>
+                <div className="login-feature">
+                    <div className="login-feature-icon">📝</div>
+                    <div className="login-feature-text">
+                        <strong>Shared notes</strong>
+                        <span>Collaborate in real-time with markdown</span>
+                    </div>
+                </div>
+                <div className="login-feature">
+                    <div className="login-feature-icon">📄</div>
+                    <div className="login-feature-text">
+                        <strong>Auto transcripts</strong>
+                        <span>Every call saved and downloadable</span>
+                    </div>
+                </div>
+                <div className="login-left-footer">sopra-fs26 · group 06</div>
+            </div>
+            <div className="login-right-panel">
+            <div className="auth-card">
+                <div style={{textAlign: "center", marginBottom: 20}}>
+                    <div style={{fontSize: 22, fontWeight: 700, color: "#1a1a2e"}}>
+                        {authMode === "login" ? "Welcome back" : "Create an account"}
+                    </div>
+                    <div style={{fontSize: 13, color: "#6b7280", marginTop: 4}}>
+                        {authMode === "login" ? "Sign in to continue" : "Join ComunicALL today"}
+                    </div>
+                </div>
                 <div style={{width: "100%", maxWidth: "280px", margin: "0 auto"}}>
                     <ConfigProvider
                         theme={{
@@ -319,7 +344,8 @@ const Login: React.FC = () => {
                     </ConfigProvider>
                 </div>
             </div>
-        </div>
+            </div>
+            </div>
     );
 };
 

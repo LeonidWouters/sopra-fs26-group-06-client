@@ -1,5 +1,5 @@
 "use client";
-import {Button, Form, Input, Radio, message} from "antd";
+import {Button, Form, Input, Radio, Tabs, message} from "antd";
 import React, {useEffect, useState} from "react";
 import {useParams, useRouter} from "next/navigation";
 import {useApi} from "@/hooks/useApi";
@@ -211,89 +211,88 @@ const Profile: React.FC = () => {
 
                 {isOwnProfile && (
                     <div className={profileStyles.card}>
-                        <div style={{fontSize: 24, fontWeight: 600, color: "#101828"}}>Edit Profile</div>
-                        <div style={{color: "#4a5565", marginTop: 4, marginBottom: 24}}>Change your username, bio or
-                            accessibility status
-                        </div>
-                        <Form layout="vertical" onFinish={handleSaveProfile}>
-                            <Form.Item label="Username">
-                                <Input value={editUsername} onChange={e => setEditUsername(e.target.value)}/>
-                            </Form.Item>
-                            <Form.Item label="Bio">
-                                <Input.TextArea rows={3} value={editBio} onChange={e => setEditBio(e.target.value)}
-                                                placeholder="Tell us about yourself..."/>
-                            </Form.Item>
-                            <Form.Item label="Accessibility Status">
-                                <Radio.Group value={editDisability} onChange={e => setEditDisability(e.target.value)}>
-                                    <Radio value="HEARING">Hearing</Radio>
-                                    <Radio value="DEAF">Deaf</Radio>
-                                </Radio.Group>
-                            </Form.Item>
-                            <Button type="primary" htmlType="submit">Save Changes</Button>
-                        </Form>
-                    </div>
-                )}
-
-                {isOwnProfile && (
-                    <div className={profileStyles.card}>
-                        <div style={{fontSize: 24, fontWeight: 600, color: "#101828"}}>Change Password</div>
-                        <div style={{color: "#4a5565", marginTop: 4, marginBottom: 24}}>You will be logged out after
-                            changing your password
-                        </div>
-                        <Form layout="vertical" onFinish={changePassword}>
-                            <Form.Item
-                                label="New Password"
-                                name="password"
-                                rules={[
-                                    {required: true, message: "Please enter a new password"},
-                                    {
-                                        validator: async () => {
-                                            return level >= minLevel
-                                                ? Promise.resolve()
-                                                : Promise.reject(errorMessage);
-                                        },
-                                    }
-                                ]}
-                            >
-                                <PasswordInput
-                                    onLevelChange={setLevel}
-                                    settings={{
-                                        colorScheme: {
-                                            levels: [
-                                                "#ff4d4f",
-                                                "#faad14",
-                                                "#52c41a",
-                                                "#52c41a",
-                                                "#52c41a",
-                                            ],
-                                            noLevel: "#434343",
-                                        },
-                                        height: 5,
-                                        alwaysVisible: false,
-                                    }}
-                                    placeholder="Enter new password"
-                                />
-                            </Form.Item>
-                            <Form.Item
-                                label="Confirm Password"
-                                name="confirmPassword"
-                                dependencies={['password']}
-                                rules={[
-                                    {required: true, message: "Please confirm your password"},
-                                    ({getFieldValue}) => ({
-                                        validator(_, value) {
-                                            if (!value || getFieldValue('password') === value) {
-                                                return Promise.resolve();
-                                            }
-                                            return Promise.reject(new Error("The passwords do not match!"));
-                                        },
-                                    }),
-                                ]}
-                            >
-                                <Input.Password placeholder="Confirm new password"/>
-                            </Form.Item>
-                            <Button type="primary" htmlType="submit">Update Password</Button>
-                        </Form>
+                        <Tabs
+                            defaultActiveKey="edit"
+                            items={[
+                                {
+                                    key: "edit",
+                                    label: "Edit Profile",
+                                    children: (
+                                        <>
+                                            <div style={{color: "#4a5565", marginBottom: 24}}>Change your username, bio or accessibility status</div>
+                                            <Form layout="vertical" onFinish={handleSaveProfile}>
+                                                <Form.Item label="Username">
+                                                    <Input value={editUsername} onChange={e => setEditUsername(e.target.value)}/>
+                                                </Form.Item>
+                                                <Form.Item label="Bio">
+                                                    <Input.TextArea rows={3} value={editBio} onChange={e => setEditBio(e.target.value)} placeholder="Tell us about yourself..."/>
+                                                </Form.Item>
+                                                <Form.Item label="Accessibility Status">
+                                                    <Radio.Group value={editDisability} onChange={e => setEditDisability(e.target.value)}>
+                                                        <Radio value="HEARING">Hearing</Radio>
+                                                        <Radio value="DEAF">Deaf</Radio>
+                                                    </Radio.Group>
+                                                </Form.Item>
+                                                <Button type="primary" htmlType="submit">Save Changes</Button>
+                                            </Form>
+                                        </>
+                                    ),
+                                },
+                                {
+                                    key: "security",
+                                    label: "Security",
+                                    children: (
+                                        <>
+                                            <div style={{color: "#4a5565", marginBottom: 24}}>You will be logged out after changing your password</div>
+                                            <Form layout="vertical" onFinish={changePassword}>
+                                                <Form.Item
+                                                    label="New Password"
+                                                    name="password"
+                                                    rules={[
+                                                        {required: true, message: "Please enter a new password"},
+                                                        {
+                                                            validator: async () => level >= minLevel
+                                                                ? Promise.resolve()
+                                                                : Promise.reject(errorMessage),
+                                                        },
+                                                    ]}
+                                                >
+                                                    <PasswordInput
+                                                        onLevelChange={setLevel}
+                                                        settings={{
+                                                            colorScheme: {
+                                                                levels: ["#ff4d4f", "#faad14", "#52c41a", "#52c41a", "#52c41a"],
+                                                                noLevel: "#434343",
+                                                            },
+                                                            height: 5,
+                                                            alwaysVisible: false,
+                                                        }}
+                                                        placeholder="Enter new password"
+                                                    />
+                                                </Form.Item>
+                                                <Form.Item
+                                                    label="Confirm Password"
+                                                    name="confirmPassword"
+                                                    dependencies={["password"]}
+                                                    rules={[
+                                                        {required: true, message: "Please confirm your password"},
+                                                        ({getFieldValue}) => ({
+                                                            validator(_, value) {
+                                                                if (!value || getFieldValue("password") === value) return Promise.resolve();
+                                                                return Promise.reject(new Error("The passwords do not match!"));
+                                                            },
+                                                        }),
+                                                    ]}
+                                                >
+                                                    <Input.Password placeholder="Confirm new password"/>
+                                                </Form.Item>
+                                                <Button type="primary" htmlType="submit">Update Password</Button>
+                                            </Form>
+                                        </>
+                                    ),
+                                },
+                            ]}
+                        />
                     </div>
                 )}
 
