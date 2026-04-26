@@ -81,6 +81,16 @@ const TranscriptsPage: React.FC = () => {
         return `${Math.max(1, Math.round(bytes / 1024))} KB`;
     };
 
+    const formatDate = (iso: string) => {
+        const d = new Date(iso);
+        return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+    };
+
+    const wordCount = (content: string) => {
+        const words = content.trim().split(/\s+/).filter(Boolean).length;
+        return `${words} word${words !== 1 ? "s" : ""}`;
+    };
+
     if (!isReady || loading) {
         return (
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
@@ -137,13 +147,50 @@ const TranscriptsPage: React.FC = () => {
                                     </div>
                                     <div>
                                         <div className={styles.cardTitle}>
-                                            Video Call {item.createdAt.slice(0, 10)}
+                                            {item.kind === "transcript" ? "Transcript" : "Note"} · {formatDate(item.createdAt)}
                                         </div>
-                                        <div className={styles.cardMeta}>{formatSize(item.content)}</div>
+                                        <div className={styles.cardMeta}>{wordCount(item.content)} · {formatSize(item.content)}</div>
                                     </div>
                                 </div>
                                 <div className={styles.participants}>
-                                    {item.kind === "transcript" ? "Transcript" : "Note"}
+                                    <span style={{
+                                        display: "inline-block",
+                                        padding: "2px 10px",
+                                        borderRadius: 12,
+                                        fontSize: 11,
+                                        fontWeight: 600,
+                                        background: item.kind === "transcript" ? "#ede9fe" : "#dcfce7",
+                                        color: item.kind === "transcript" ? "#6d28d9" : "#059669",
+                                    }}>
+                                        {item.kind === "transcript" ? "Transcript" : "Note"}
+                                    </span>
+                                    {"updatedAt" in item && (
+                                        <span style={{fontSize: 11, color: "#9ca3af", marginLeft: 8}}>
+                                            updated {formatDate((item as {updatedAt: string}).updatedAt)}
+                                        </span>
+                                    )}
+                                </div>
+                                <div style={{position: "relative", marginTop: 10, minHeight: 58}}>
+                                    <div style={{
+                                        fontSize: 12,
+                                        color: "#6b7280",
+                                        lineHeight: 1.6,
+                                        overflow: "hidden",
+                                        display: "-webkit-box",
+                                        WebkitLineClamp: 3,
+                                        WebkitBoxOrient: "vertical",
+                                    }}>
+                                        {item.content?.trim() || "No content"}
+                                    </div>
+                                    <div style={{
+                                        position: "absolute",
+                                        bottom: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: 20,
+                                        background: "linear-gradient(to bottom, transparent, white)",
+                                        pointerEvents: "none",
+                                    }}/>
                                 </div>
                                 <Button
                                     icon={<EyeOutlined />}

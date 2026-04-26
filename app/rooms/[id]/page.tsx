@@ -55,6 +55,8 @@ const RoomPage: React.FC = () => {
     const [form] = Form.useForm();
     const userVoiceURI = useRef<string>("");
     const [isMuted, setIsMuted] = useState<boolean>(false);
+    const savedVolume = typeof window !== "undefined" ? parseFloat(localStorage.getItem("callVolume") ?? "1") : 1;
+    const [volume, setVolume] = useState<number>(isNaN(savedVolume) ? 1 : savedVolume);
     const [remoteMuted, setRemoteMuted] = useState<boolean>(false);
     const [editorTimeout,setEditorTimeout] = useState<boolean>(false);
     const [isMediaReady, setIsMediaReady] = useState(false);
@@ -371,6 +373,8 @@ const RoomPage: React.FC = () => {
             console.log(event.type);
             if (remoteRef.current) {
                 remoteRef.current.srcObject = event.streams[0];
+                const saved = parseFloat(localStorage.getItem("callVolume") ?? "1");
+                remoteRef.current.volume = isNaN(saved) ? 1 : saved;
             }
         };
 
@@ -760,6 +764,30 @@ const RoomPage: React.FC = () => {
                         >
                         <Button  style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
                     </Popover> : null}
+                        <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
+                            <span style={{fontSize: "18px", userSelect: "none"}}>
+                                {volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}
+                            </span>
+                            <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: "2px"}}>
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={1}
+                                    step={0.05}
+                                    value={volume}
+                                    onChange={e => {
+                                        const v = parseFloat(e.target.value);
+                                        setVolume(v);
+                                        if (remoteRef.current) remoteRef.current.volume = v;
+                                        localStorage.setItem("callVolume", String(v));
+                                    }}
+                                    style={{width: "90px", accentColor: "#6B21D6", cursor: "pointer"}}
+                                />
+                                <span style={{fontSize: "10px", color: "#6b7280", lineHeight: 1}}>
+                                    {Math.round(volume * 100)}%
+                                </span>
+                            </div>
+                        </div>
                         <Button
                             shape="circle"
                             icon={isMuted ? <AudioMutedOutlined /> : <AudioOutlined />}
