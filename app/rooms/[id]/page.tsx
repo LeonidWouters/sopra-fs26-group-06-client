@@ -546,7 +546,6 @@ const RoomPage: React.FC = () => {
         };
 
         speechRef.current.onend = () => {
-            setTimeout(() => speechRef.current?.start(), 500);
             if(speechRef.current){speechRef.current.lang = langRef.current;}
             setTimeout(() => speechRef.current?.start(), 10000);
         }
