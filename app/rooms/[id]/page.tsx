@@ -63,7 +63,7 @@ const RoomPage: React.FC = () => {
     const [editorTimeout,setEditorTimeout] = useState<boolean>(false);
     const [isMediaReady, setIsMediaReady] = useState(false);
     const [incomingOffer, setIncomingOffer] = useState<RTCSessionDescriptionInit | null>(null);
-    const pendingCandidates = useRef<any[]>([]);
+    const pendingCandidates = useRef<RTCIceCandidate[]>([]);
 
     interface textMsg {
         message: string;
@@ -506,8 +506,27 @@ const RoomPage: React.FC = () => {
 
         speechRef.current.onerror = (event) => {
             console.log(event.error);
-            if(event.error === "network" || event.error === "no-speech" || event.error === "aborted"){
+            const recoverable: string[] = ["no-speech","aborted","network"];
+            const restart : string[] = ["not-allowed","service-not-allowed"]
+            if(event.error in recoverable) {
                 setTimeout(() => speechRef.current?.start(), 500);
+            }
+            if(event.error in restart){
+                speechRef.current = null;
+                if(event.error === "not-allowed" || "service-not-allowed"){
+                    console.log("user or browser blocked microphone access, retrying...")
+                    navigator.mediaDevices.getUserMedia({audio: true}).then(() => {
+                        startSTT();
+                    }).catch((error) => {
+                        console.log("Couldn't access microphone, starting text to text",error);
+                        startTTT();
+                    });
+                }
+            }
+            else {
+                console.log(event.error);
+                speechRef.current = null;
+                startSTT();
             }
         }
 
