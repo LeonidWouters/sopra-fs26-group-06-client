@@ -10,7 +10,7 @@ import dynamic from 'next/dynamic';
 import {User} from "@/types/user";
 import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
-import {AudioMutedOutlined, AudioOutlined, CloseCircleOutlined, SoundOutlined} from "@ant-design/icons";
+import {AudioMutedOutlined, AudioOutlined, CloseCircleOutlined, CommentOutlined, SoundOutlined} from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
 
 
@@ -815,7 +815,7 @@ const RoomPage: React.FC = () => {
                                 top: "16px",
                                 right: "16px",
                                 backgroundColor: "rgba(239, 68, 68, 0.85)",
-                                color: "#ffffff",
+                                color: "#000000",
                                 padding: "6px 14px",
                                 borderRadius: "8px",
                                 fontSize: "13px",
@@ -826,22 +826,41 @@ const RoomPage: React.FC = () => {
                         )}
                     </div>
 
-                    <div style={{padding: "10px 24px", borderTop: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "#fafafa"}}>
-
+                    <div style={{padding: "10px 24px", borderTop: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "#ffffff"}}>
                         {/* Left: chat */}
-                        <div style={{display: "flex", alignItems: "center", gap: 8, flex: 1}}>
-                            <Button size="small" onClick={loadChat} style={{borderRadius: 8, whiteSpace: "nowrap"}}>
-                                💬 Chat
+                        <Space size={"small"} align={"center"}>
+                        <div style={{display: "flex", alignItems: "center",gap:12, flex: 1}}>
+                            <Button size="large" onClick={loadChat} style={{borderRadius: 5, whiteSpace: "nowrap", backgroundColor:"#e0ccf5"}} icon={<CommentOutlined/>}>
                             </Button>
+
                             <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1}}>
-                                <Form.Item name="message" style={{flex: 1, marginBottom: 0, width: "100%"}} hidden={!chat}>
+                                <Form.Item name="message" style={{flex: 1, width: "100%"}} hidden={!chat}>
                                     <Input placeholder="Send a message…" style={{borderRadius: 8}}/>
                                 </Form.Item>
                             </Form>
                         </div>
+                        </Space>
+                        {ttsEnabledBool ? <Popover
+                            trigger="click"
+                            title="Choose a Voice "
+                            content={
+                                <Select
+                                    style={{ width: 400 }}
+                                    defaultValue={0}
+                                    onChange={(index) => chooseVoice(index)}
+                                    options={window.speechSynthesis.getVoices().map((voice, index) => ({
+                                        label: voice.name,
+                                        value: index
+                                    }))}
+                                />
+                            }
+                        >
+                            <Button  size={"large"} style={{justifyItems : "flex-end"}} icon={<SoundOutlined />} />
+                        </Popover> : null}
 
                         {/* Center: mute + volume */}
-                        <div style={{display: "flex", alignItems: "center", gap: 16, background: "#f0ebfa", borderRadius: 12, padding: "6px 20px"}}>
+                        <Space size="middle" align="center">
+                        <div style={{display: "flex", alignItems: "center", gap: 16, background: "#FFFFFF", borderRadius: 20, padding: 7}}>
                             <Button
                                 shape="circle"
                                 size="large"
@@ -869,7 +888,8 @@ const RoomPage: React.FC = () => {
                                 </div>
                                 <span style={{fontSize: 10, color: "#9ca3af"}}>{Math.round(volume * 100)}%</span>
                             </div>
-                        </div>
+                    </div>
+                        </Space>
 
                         <Drawer title="Chat History" open={chatHistory} onClose={closeChat} placement="left" mask={false}>
                             {messages.map((msg, index) => (
@@ -878,23 +898,7 @@ const RoomPage: React.FC = () => {
                                 </div>
                             ))}</Drawer>
                     <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
-                        {ttsEnabledBool ? <Popover
-                            trigger="click"
-                            title="Choose a Voice "
-                            content={
-                                <Select
-                                    style={{ width: 400 }}
-                                    defaultValue={0}
-                                    onChange={(index) => chooseVoice(index)}
-                            options={window.speechSynthesis.getVoices().map((voice, index) => ({
-                                label: voice.name,
-                                value: index
-                            }))}
-                        />
-                        }
-                        >
-                        <Button  style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
-                    </Popover> : null}
+                        <Space size={"small"} align={"center"}>
                         {sttEnabledBool ? (
                             <Space.Compact>
                             <Popover
@@ -930,10 +934,11 @@ const RoomPage: React.FC = () => {
                                 />
                             }
                         >
-                            <Button  style={{color:"black"}} title={currentAccent} type={"default"}>{currentAccent
+                            <Button  style={{color:"white", backgroundColor : "#ff71fb"}} title={currentAccent} type={"default"}>{currentAccent
                             }</Button>
                         </Popover>
                             </Space.Compact>) : null}
+                        </Space>
                     </div>
 
                     </div>
