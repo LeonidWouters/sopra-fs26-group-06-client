@@ -55,13 +55,15 @@ const RoomPage: React.FC = () => {
     const [form] = Form.useForm();
     const userVoiceURI = useRef<string>("");
     const [isMuted, setIsMuted] = useState<boolean>(false);
-    const savedVolume = typeof window !== "undefined" ? parseFloat(localStorage.getItem("callVolume") ?? "1") : 1;
-    const [volume, setVolume] = useState<number>(isNaN(savedVolume) ? 1 : savedVolume);
+    const [volume, setVolume] = useState<number>(() => {
+        const saved = typeof window !== "undefined" ? parseFloat(localStorage.getItem("callVolume") ?? "1") : 1;
+        return isNaN(saved) ? 1 : saved;
+    });
     const [remoteMuted, setRemoteMuted] = useState<boolean>(false);
     const [editorTimeout,setEditorTimeout] = useState<boolean>(false);
     const [isMediaReady, setIsMediaReady] = useState(false);
     const [incomingOffer, setIncomingOffer] = useState<RTCSessionDescriptionInit | null>(null);
-    const pendingCandidates = useRef<any[]>([]);
+    const pendingCandidates = useRef<RTCIceCandidate[]>([]);
 
     interface textMsg {
         message: string;
@@ -504,8 +506,27 @@ const RoomPage: React.FC = () => {
 
         speechRef.current.onerror = (event) => {
             console.log(event.error);
-            if(event.error === "network" || event.error === "no-speech" || event.error === "aborted"){
+            const recoverable: string[] = ["no-speech","aborted","network"];
+            const restart : string[] = ["not-allowed","service-not-allowed"]
+            if(event.error in recoverable) {
                 setTimeout(() => speechRef.current?.start(), 500);
+            }
+            if(event.error in restart){
+                speechRef.current = null;
+                if(event.error === "not-allowed" || "service-not-allowed"){
+                    console.log("user or browser blocked microphone access, retrying...")
+                    navigator.mediaDevices.getUserMedia({audio: true}).then(() => {
+                        startSTT();
+                    }).catch((error) => {
+                        console.log("Couldn't access microphone, starting text to text",error);
+                        startTTT();
+                    });
+                }
+            }
+            else {
+                console.log(event.error);
+                speechRef.current = null;
+                startSTT();
             }
         }
 
@@ -734,77 +755,82 @@ const RoomPage: React.FC = () => {
                         )}
                     </div>
 
-                    <div style={{padding: "12px 24px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center"}}>
-                        <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
-                            <Form form = {form} onFinish={(values) => {
-                                sendText(values.message);
-                                form.resetFields();
-                            }} layout="inline">
-                                <Form.Item name="message" style={{flex: 1, marginBottom: 0}} hidden={!chat}>
-                                    <Input placeholder="Press enter to submit" />
+                    <div style={{padding: "10px 24px", borderTop: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "#fafafa"}}>
+
+                        {/* Left: chat */}
+                        <div style={{display: "flex", alignItems: "center", gap: 8, flex: 1}}>
+                            <Button size="small" onClick={loadChat} style={{borderRadius: 8, whiteSpace: "nowrap"}}>
+                                💬 Chat
+                            </Button>
+                            <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1}}>
+                                <Form.Item name="message" style={{flex: 1, marginBottom: 0, width: "100%"}} hidden={!chat}>
+                                    <Input placeholder="Send a message…" style={{borderRadius: 8}}/>
                                 </Form.Item>
                             </Form>
-                            <Button type="default" onClick={loadChat}>show chat history</Button>
                         </div>
-                    <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
-                        {ttsEnabledBool ? <Popover
-                            trigger="click"
-                            title="Choose a Voice"
-                            content={
-                                <Select
-                                    style={{ width: 400 }}
-                                    defaultValue={0}
-                                    onChange={(index) => chooseVoice(index)}
-                            options={window.speechSynthesis.getVoices().map((voice, index) => ({
-                                label: voice.name,
-                                value: index
-                            }))}
-                        />
-                        }
-                        >
-                        <Button  style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
-                    </Popover> : null}
-                        <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
-                            <span style={{fontSize: "18px", userSelect: "none"}}>
-                                {volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}
-                            </span>
-                            <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: "2px"}}>
-                                <input
-                                    type="range"
-                                    min={0}
-                                    max={1}
-                                    step={0.05}
-                                    value={volume}
-                                    onChange={e => {
-                                        const v = parseFloat(e.target.value);
-                                        setVolume(v);
-                                        if (remoteRef.current) remoteRef.current.volume = v;
-                                        localStorage.setItem("callVolume", String(v));
-                                    }}
-                                    style={{width: "90px", accentColor: "#6B21D6", cursor: "pointer"}}
-                                />
-                                <span style={{fontSize: "10px", color: "#6b7280", lineHeight: 1}}>
-                                    {Math.round(volume * 100)}%
-                                </span>
+
+                        {/* Center: mute + volume */}
+                        <div style={{display: "flex", alignItems: "center", gap: 16, background: "#f0ebfa", borderRadius: 12, padding: "6px 20px"}}>
+                            <Button
+                                shape="circle"
+                                size="large"
+                                icon={isMuted ? <AudioMutedOutlined/> : <AudioOutlined/>}
+                                onClick={toggleMute}
+                                style={{backgroundColor: isMuted ? "#ef4444" : "#6B21D6", color: "white", border: "none", width: 44, height: 44}}
+                            />
+                            <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: 2}}>
+                                <div style={{display: "flex", alignItems: "center", gap: 6}}>
+                                    <span style={{fontSize: 16}}>{volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}</span>
+                                    <input
+                                        type="range"
+                                        min={0}
+                                        max={1}
+                                        step={0.05}
+                                        value={volume}
+                                        onChange={e => {
+                                            const v = parseFloat(e.target.value);
+                                            setVolume(v);
+                                            if (remoteRef.current) remoteRef.current.volume = v;
+                                            localStorage.setItem("callVolume", String(v));
+                                        }}
+                                        style={{width: 90, accentColor: "#6B21D6", cursor: "pointer"}}
+                                    />
+                                </div>
+                                <span style={{fontSize: 10, color: "#9ca3af"}}>{Math.round(volume * 100)}%</span>
                             </div>
                         </div>
-                        <Button
-                            shape="circle"
-                            icon={isMuted ? <AudioMutedOutlined /> : <AudioOutlined />}
-                            onClick={toggleMute}
-                            style={{
-                                backgroundColor: isMuted ? "#ef4444" : "#6B21D6",
-                                color: "white",
-                                border: "none",
-                            }}
-                        />
-                    </div>
-                        <Drawer title = "Chat History" open={chatHistory} onClose={closeChat} placement={"left"} mask={false}>
-                            {messages.map((msg, index) => <div key={index}
-                                                               style={{padding: "8px 12px", marginBottom: "8px", backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: "8px", color : "white", justifyContent : msg.client ? "flex-start" : "flex-end"}}>
-                                {msg.timestamp + " : " + msg.message}</div>)}
+
+                        {/* Right: TTS voice picker */}
+                        <div style={{display: "flex", alignItems: "center", justifyContent: "flex-end", flex: 1}}>
+                            {ttsEnabledBool && (
+                                <Popover
+                                    trigger="click"
+                                    title="Choose a Voice"
+                                    content={
+                                        <Select
+                                            style={{width: 360}}
+                                            defaultValue={0}
+                                            onChange={(index) => chooseVoice(index)}
+                                            options={window.speechSynthesis.getVoices().map((voice, index) => ({
+                                                label: voice.name,
+                                                value: index,
+                                            }))}
+                                        />
+                                    }
+                                >
+                                    <Button icon={<SoundOutlined/>} style={{borderRadius: 8}}>Voice</Button>
+                                </Popover>
+                            )}
+                        </div>
+
+                        <Drawer title="Chat History" open={chatHistory} onClose={closeChat} placement="left" mask={false}>
+                            {messages.map((msg, index) => (
+                                <div key={index} style={{padding: "8px 12px", marginBottom: 8, backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: 8, color: "white"}}>
+                                    {msg.timestamp + " : " + msg.message}
+                                </div>
+                            ))}
                         </Drawer>
-                </div>
+                    </div>
                 </div>
                 <div style={{flex: 1, padding: "24px", display: "flex", flexDirection: "column"}}>
                     <div style={{
