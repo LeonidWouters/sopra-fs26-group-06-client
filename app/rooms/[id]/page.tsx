@@ -2,7 +2,7 @@
 
 import React, {useEffect, useRef, useState} from 'react';
 import {useParams, useRouter} from 'next/navigation';
-import {Button, Form, Input, Segmented, Spin, Drawer, Modal, Popover, Select, notification} from "antd";
+import {Button, Drawer, Form, Input, Modal, notification, Popover, Segmented, Select, Space, Spin} from "antd";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
@@ -10,7 +10,7 @@ import dynamic from 'next/dynamic';
 import {User} from "@/types/user";
 import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
-import {CloseCircleOutlined, SoundOutlined, AudioOutlined, AudioMutedOutlined} from "@ant-design/icons";
+import {AudioMutedOutlined, AudioOutlined, CloseCircleOutlined, CommentOutlined, SoundOutlined} from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
 
 
@@ -24,6 +24,41 @@ export interface Room {
     CallerID: number | null;
     CalleeID: number | null;
 }
+
+const langs : ([string,string[]])[] = [
+    ['Afrikaans',        ['af-ZA']],
+    ['Bahasa Indonesia', ['id-ID']],
+    ['Bahasa Melayu',    ['ms-MY']],
+    ['Català',           ['ca-ES']],
+    ['Čeština',          ['cs-CZ']],
+    ['Deutsch',          ['de-DE']],
+    ['English',          ['en-AU', 'en-CA', 'en-IN', 'en-NZ', 'en-ZA', 'en-GB', 'en-US']],
+    ['Español',          ['es-AR', 'es-BO', 'es-CL', 'es-CO', 'es-CR', 'es-EC', 'es-SV', 'es-ES', 'es-US', 'es-GT', 'es-HN', 'es-MX', 'es-NI', 'es-PA', 'es-PY', 'es-PE', 'es-PR', 'es-DO', 'es-UY', 'es-VE']],
+    ['Euskara',          ['eu-ES']],
+    ['Français',         ['fr-FR']],
+    ['Galego',           ['gl-ES']],
+    ['Hrvatski',         ['hr_HR']],
+    ['IsiZulu',          ['zu-ZA']],
+    ['Íslenska',         ['is-IS']],
+    ['Italiano',         ['it-IT', 'it-CH']],
+    ['Magyar',           ['hu-HU']],
+    ['Nederlands',       ['nl-NL']],
+    ['Norsk bokmål',     ['nb-NO']],
+    ['Polski',           ['pl-PL']],
+    ['Português',        ['pt-BR', 'pt-PT']],
+    ['Română',           ['ro-RO']],
+    ['Slovenčina',       ['sk-SK']],
+    ['Suomi',            ['fi-FI']],
+    ['Svenska',          ['sv-SE']],
+    ['Türkçe',           ['tr-TR']],
+    ['български',        ['bg-BG']],
+    ['Pусский',          ['ru-RU']],
+    ['Српски',           ['sr-RS']],
+    ['한국어',             ['ko-KR']],
+    ['中文',              ['cmn-Hans-CN', 'cmn-Hans-HK', 'cmn-Hant-TW', 'yue-Hant-HK']],
+    ['日本語',            ['ja-JP']],
+    ['Lingua latīna',    ['la']],
+];
 
 const RoomPage: React.FC = () => {
     const router = useRouter();
@@ -64,6 +99,13 @@ const RoomPage: React.FC = () => {
     const [isMediaReady, setIsMediaReady] = useState(false);
     const [incomingOffer, setIncomingOffer] = useState<RTCSessionDescriptionInit | null>(null);
     const pendingCandidates = useRef<RTCIceCandidate[]>([]);
+    const [sttEnabledBool, setSttEnabledBool] = useState<boolean>(false);
+    const [lang,setLang] = useState<string>("English");
+    const [accent,setAccent] = useState<string[]>(langs[7][1]);
+    const [currentAccent,setCurrentAccent] = useState<string>(accent[0]);
+    const langRef = useRef<string>(accent[0])
+
+
 
     interface textMsg {
         message: string;
@@ -476,8 +518,11 @@ const RoomPage: React.FC = () => {
             setChat(true);
             return;
         }
+        setSttEnabledBool(true);
         speechRef.current.continuous = true;
         speechRef.current.interimResults = true;
+        speechRef.current.lang = langRef.current;
+        console.log(lang);
         speechRef.current.start();
         console.log(speechRef.current);
 
@@ -501,7 +546,8 @@ const RoomPage: React.FC = () => {
         };
 
         speechRef.current.onend = () => {
-            setTimeout(() => speechRef.current?.start(), 500);
+            if(speechRef.current){speechRef.current.lang = langRef.current;}
+            setTimeout(() => speechRef.current?.start(), 10000);
         }
 
         speechRef.current.onerror = (event) => {
@@ -604,6 +650,31 @@ const RoomPage: React.FC = () => {
             ;
         }
     }, [apiService, token, isReady]);
+
+    function chooseLang(index: number) {
+        const lang = langs[index][1];
+        setAccent(lang);
+        setCurrentAccent(lang[0])
+        setLang(langs[index][0]);
+        langRef.current = currentAccent;
+        if(speechRef.current) {
+            speechRef.current.stop();
+            speechRef.current.lang = langRef.current;
+
+            notification.info({
+                title: "Language changed",
+                description: `Language was changed to ${langs[index][0]}`,
+                placement: "top",
+                duration: 2,
+            });
+        }
+    }
+
+    function chooseAccent(index: number) {
+        setCurrentAccent(accent[index]);
+        langRef.current = currentAccent;
+
+    }
 
     return (
         <div style={{display: "flex", flexDirection: "column", width: "100%", height: "100vh"}}>
@@ -744,7 +815,7 @@ const RoomPage: React.FC = () => {
                                 top: "16px",
                                 right: "16px",
                                 backgroundColor: "rgba(239, 68, 68, 0.85)",
-                                color: "#ffffff",
+                                color: "#000000",
                                 padding: "6px 14px",
                                 borderRadius: "8px",
                                 fontSize: "13px",
@@ -755,22 +826,41 @@ const RoomPage: React.FC = () => {
                         )}
                     </div>
 
-                    <div style={{padding: "10px 24px", borderTop: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "#fafafa"}}>
-
+                    <div style={{padding: "10px 24px", borderTop: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "#ffffff"}}>
                         {/* Left: chat */}
-                        <div style={{display: "flex", alignItems: "center", gap: 8, flex: 1}}>
-                            <Button size="small" onClick={loadChat} style={{borderRadius: 8, whiteSpace: "nowrap"}}>
-                                💬 Chat
+                        <Space size={"small"} align={"center"}>
+                        <div style={{display: "flex", alignItems: "center",gap:12, flex: 1}}>
+                            <Button size="large" onClick={loadChat} style={{borderRadius: 5, whiteSpace: "nowrap", backgroundColor:"#e0ccf5"}} icon={<CommentOutlined/>}>
                             </Button>
+
                             <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1}}>
-                                <Form.Item name="message" style={{flex: 1, marginBottom: 0, width: "100%"}} hidden={!chat}>
+                                <Form.Item name="message" style={{flex: 1, width: "100%"}} hidden={!chat}>
                                     <Input placeholder="Send a message…" style={{borderRadius: 8}}/>
                                 </Form.Item>
                             </Form>
                         </div>
+                        </Space>
+                        {ttsEnabledBool ? <Popover
+                            trigger="click"
+                            title="Choose a Voice "
+                            content={
+                                <Select
+                                    style={{ width: 400 }}
+                                    defaultValue={0}
+                                    onChange={(index) => chooseVoice(index)}
+                                    options={window.speechSynthesis.getVoices().map((voice, index) => ({
+                                        label: voice.name,
+                                        value: index
+                                    }))}
+                                />
+                            }
+                        >
+                            <Button  size={"large"} style={{justifyItems : "flex-end"}} icon={<SoundOutlined />} />
+                        </Popover> : null}
 
                         {/* Center: mute + volume */}
-                        <div style={{display: "flex", alignItems: "center", gap: 16, background: "#f0ebfa", borderRadius: 12, padding: "6px 20px"}}>
+                        <Space size="middle" align="center">
+                        <div style={{display: "flex", alignItems: "center", gap: 16, background: "#FFFFFF", borderRadius: 20, padding: 7}}>
                             <Button
                                 shape="circle"
                                 size="large"
@@ -798,38 +888,59 @@ const RoomPage: React.FC = () => {
                                 </div>
                                 <span style={{fontSize: 10, color: "#9ca3af"}}>{Math.round(volume * 100)}%</span>
                             </div>
-                        </div>
-
-                        {/* Right: TTS voice picker */}
-                        <div style={{display: "flex", alignItems: "center", justifyContent: "flex-end", flex: 1}}>
-                            {ttsEnabledBool && (
-                                <Popover
-                                    trigger="click"
-                                    title="Choose a Voice"
-                                    content={
-                                        <Select
-                                            style={{width: 360}}
-                                            defaultValue={0}
-                                            onChange={(index) => chooseVoice(index)}
-                                            options={window.speechSynthesis.getVoices().map((voice, index) => ({
-                                                label: voice.name,
-                                                value: index,
-                                            }))}
-                                        />
-                                    }
-                                >
-                                    <Button icon={<SoundOutlined/>} style={{borderRadius: 8}}>Voice</Button>
-                                </Popover>
-                            )}
-                        </div>
+                    </div>
+                        </Space>
 
                         <Drawer title="Chat History" open={chatHistory} onClose={closeChat} placement="left" mask={false}>
                             {messages.map((msg, index) => (
                                 <div key={index} style={{padding: "8px 12px", marginBottom: 8, backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: 8, color: "white"}}>
                                     {msg.timestamp + " : " + msg.message}
                                 </div>
-                            ))}
-                        </Drawer>
+                            ))}</Drawer>
+                    <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
+                        <Space size={"small"} align={"center"}>
+                        {sttEnabledBool ? (
+                            <Space.Compact>
+                            <Popover
+                            trigger="click"
+                            title="Chosse recognized language"
+                            content={
+                                <Select
+                                    style={{ width: 400 }}
+                                    defaultValue={0}
+                                    onChange={(index) => chooseLang(index)}
+                                    options={langs.map((language, index) => ({
+                                        label: language[0],
+                                        value: index
+                                    }))}
+                                />
+                            }
+                        >
+                            <Button  style={{color:"black"}} title={lang} type={"default"}>{lang}</Button>
+                        </Popover>
+                        <Popover
+                            placement={"top"}
+                            trigger = "click"
+                            title = "Select Accent"
+                            content = {
+                                <Select
+                                    style={{ width: 400 }}
+                                    defaultValue={0}
+                                    onChange={(index) => chooseAccent(index)}
+                                    options={accent.map((accents, index) => ({
+                                        label: accents,
+                                        value: index
+                                    }))}
+                                />
+                            }
+                        >
+                            <Button  style={{color:"white", backgroundColor : "#ff71fb"}} title={currentAccent} type={"default"}>{currentAccent
+                            }</Button>
+                        </Popover>
+                            </Space.Compact>) : null}
+                        </Space>
+                    </div>
+
                     </div>
                 </div>
                 <div style={{flex: 1, padding: "24px", display: "flex", flexDirection: "column"}}>
@@ -868,7 +979,7 @@ const RoomPage: React.FC = () => {
                                     wsRef.current.send(JSON.stringify({ type: "markdown-update", content: newText }));
                                 }
                             }}
-                            height={600}
+                            height={400}
                             textareaProps={{
                                 placeholder: "# Shared notes\n\nHere you can collaboratively edit notes..."
                             }}
