@@ -1,5 +1,5 @@
 "use client";
-import {Button, Form, Input, Radio, Tabs, message} from "antd";
+import {Button, Form, Input, Radio, Tabs, message, Badge, Tooltip} from "antd";
 import React, {useEffect, useState} from "react";
 import {useParams, useRouter} from "next/navigation";
 import {useApi} from "@/hooks/useApi";
@@ -8,10 +8,11 @@ import useLocalStorage from "@/hooks/useLocalStorage";
 import {useAuth} from "@/hooks/useAuth";
 import mainStyles from "@/styles/mainpage.module.css";
 import profileStyles from "@/styles/profile.module.css";
-import {LogoutOutlined} from "@ant-design/icons";
+import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined} from "@ant-design/icons";
 import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 import Image from "next/image";
 import {PasswordInput} from "antd-password-input-strength";
+import styles from "@/styles/mainpage.module.css";
 
 
 interface FormFieldProps {
@@ -37,6 +38,7 @@ const Profile: React.FC = () => {
     const errorMessage = "Password is too weak";
     const [isFriend, setIsFriend] = useState(false);
     const [requestSent, setRequestSent] = useState(false);
+    const [me, setMe] = useState<User | null>(null);
 
 
     useEffect(() => {
@@ -63,6 +65,12 @@ const Profile: React.FC = () => {
                     return String(requestId) === String(loggedInId);
                 });
                 setRequestSent(requestWasSent);
+                if (String(loggedInId) !== String(id)) {
+                    const fetchedMe: User = await apiService.get<User>(`/users/${loggedInId}`, token);
+                    setMe(fetchedMe);
+                } else {
+                    setMe(user);
+                }
             } catch (error) {
                 messageApi.open({type: "error", content: "Could not load user."});
             }
@@ -121,31 +129,49 @@ const Profile: React.FC = () => {
     if (!user) return <div>Loading...</div>;
 
     return (
-        <div className={mainStyles.container}>
+        <div className={mainStyles.appShell}>
             {contextHolder}
-            <div className={mainStyles.navbar}>
-                <div className={mainStyles.logoWrapper}>
-                    <Image
-                        src="/unnamed-Photoroom.png"
-                        alt="CommunicALL"
-                        width={200}
-                        height={55}
-                        style={{width: "auto", maxWidth: "200px", height: "100%", maxHeight: "55px"}}
-                        onClick={() => router.push("/mainpage")}
-                    />
+            <aside className={mainStyles.sidebar}>
+                <div className={mainStyles.sidebarTop}>
+                    <div className={mainStyles.sbLogo}>
+                        <Image src="/banner_logo.png" alt="Logo" width={32} height={32}
+                               style={{width: 32, height: 32, objectFit: 'contain'}}/>
+                    </div>
+                    <Tooltip title="Rooms" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => router.push("/mainpage")}>
+                            <AppstoreOutlined/>
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Friends" placement="right">
+                        <Badge count={me?.pendingFriendRequests?.length ?? 0} size="small" offset={[-4, 4]}>
+                            <div className={mainStyles.sbIcon} onClick={() => router.push(`/users/${loggedInId}/friends`)}>
+                                <TeamOutlined/>
+                            </div>
+                        </Badge>
+                    </Tooltip>
+                    <Tooltip title="Transcripts & Notes" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => router.push(`/users/${loggedInId}/transcripts`)}>
+                            <FileTextOutlined/>
+                        </div>
+                    </Tooltip>
                 </div>
-                <div className={mainStyles.navButtons}>
-                    <Button color="default" variant="text"
-                            onClick={() => router.push(`/mainpage`)}>
-                        ← Back
-                    </Button>
-                    <Button color="danger" variant="text" icon={<LogoutOutlined/>}
-                            onClick={handleLogout}>
-                        Sign Out
-                    </Button>
+                <div className={mainStyles.sidebarBottom}>
+                    <Tooltip title="Sign Out" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={handleLogout}>
+                            <LogoutOutlined/>
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="My Profile" placement="right">
+                        <div className={mainStyles.sbAvatar}
+                             style={{backgroundColor: getAvatarColor(me?.username ?? "")}}
+                             onClick={() => router.push(`/users/${loggedInId}`)}>
+                            {getAvatarInitials(me?.username ?? "")}
+                        </div>
+                    </Tooltip>
                 </div>
-            </div>
-            <div className={mainStyles.mainContent}>
+            </aside>
+            <div className={mainStyles.container}>
+                <div className={mainStyles.mainContent}>
                 <div className={profileStyles.card}>
                     <div style={{display: "flex", alignItems: "center", justifyContent: "space-between"}}>
                         <div style={{display: "flex", alignItems: "center", gap: 24}}>
@@ -187,23 +213,6 @@ const Profile: React.FC = () => {
                             )}
                             {!isOwnProfile && requestSent && (
                                 <Button disabled>Request Sent</Button>
-                            )}
-                            {isOwnProfile && (
-                                <Button
-                                    type="primary"
-                                    onClick={() => router.push(`/users/${id}/transcripts`)}
-                                    style={{
-                                        background: "linear-gradient(90deg, #4f46e5, #7c3aed)",
-                                        border: "none",
-                                        borderRadius: 10,
-                                        height: 44,
-                                        padding: "0 24px",
-                                        fontSize: 15,
-                                        fontWeight: 500,
-                                    }}
-                                >
-                                    See latest transcripts/notes
-                                </Button>
                             )}
                         </div>
                     </div>
@@ -297,6 +306,7 @@ const Profile: React.FC = () => {
                 )}
 
             </div>
+        </div>
         </div>
     );
 };

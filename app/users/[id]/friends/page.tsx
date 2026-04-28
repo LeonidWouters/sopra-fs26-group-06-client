@@ -1,5 +1,5 @@
 "use client";
-import {Button, Card, Tag} from "antd";
+import {Button, Card, Tag, Badge, Tooltip} from "antd";
 import React, {useEffect, useState} from "react";
 import {useParams, useRouter} from "next/navigation";
 import {useApi} from "@/hooks/useApi";
@@ -7,8 +7,9 @@ import {User} from "@/types/user";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import {useAuth} from "@/hooks/useAuth";
 import mainStyles from "@/styles/mainpage.module.css";
-import {LogoutOutlined} from "@ant-design/icons";
+import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined} from "@ant-design/icons";
 import Image from "next/image";
+import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 
 const FriendsPage: React.FC = () => {
     const router = useRouter();
@@ -20,6 +21,7 @@ const FriendsPage: React.FC = () => {
     const isOwnProfile = String(loggedInId) === String(id);
     const [friends, setFriends] = useState<User[]>([]);
     const [pendingRequests, setPendingRequests] = useState<User[]>([]);
+    const [me, setMe] = useState<User | null>(null);
 
     useEffect(() => {
         if (!isReady) return;
@@ -34,6 +36,8 @@ const FriendsPage: React.FC = () => {
                 const r: User[] = await apiService.get(`/users/${id}/friend-requests`, token);
                 setPendingRequests(r);
             }
+            const fetchedMe: User = await apiService.get(`/users/${loggedInId}`, token);
+            setMe(fetchedMe);
         };
         load();
         const interval = setInterval(load, 3000);
@@ -57,25 +61,57 @@ const FriendsPage: React.FC = () => {
     if (!isReady) return <div>Loading...</div>;
 
     return (
-        //copied from mainpage (headerbar)
-        <div className={mainStyles.container}>
-            <div className={mainStyles.navbar}>
-                <div className={mainStyles.logoWrapper}>
-                    <Image src="/unnamed-Photoroom.png" alt="CommunicALL" width={200} height={55}
-                           style={{width: "auto", maxWidth: "200px", height: "100%", maxHeight: "55px"}}
-                           onClick={() => router.push("/mainpage")}/>
+        <div className={mainStyles.appShell}>
+            <aside className={mainStyles.sidebar}>
+                <div className={mainStyles.sidebarTop}>
+                    <div className={mainStyles.sbLogo}>
+                        <Image src="/banner_logo.png" alt="Logo" width={32} height={32}
+                               style={{width: 32, height: 32, objectFit: 'contain'}}/>
+                    </div>
+                    <Tooltip title="Rooms" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => router.push("/mainpage")}>
+                            <AppstoreOutlined/>
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Friends" placement="right">
+                        <Badge count={me?.pendingFriendRequests?.length ?? 0} size="small" offset={[-4, 4]}>
+                            <div className={`${mainStyles.sbIcon} ${mainStyles.sbIconActive}`}>
+                                <TeamOutlined/>
+                            </div>
+                        </Badge>
+                    </Tooltip>
+                    <Tooltip title="Transcripts" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => router.push(`/users/${loggedInId}/transcripts`)}>
+                            <FileTextOutlined/>
+                        </div>
+                    </Tooltip>
                 </div>
-                <div className={mainStyles.navButtons}>
-                    <Button color="default" variant="text" onClick={() => router.push(`/mainpage`)}>← Back</Button>
-                    <Button color="danger" variant="text" icon={<LogoutOutlined/>} onClick={() => {
-                        apiService.put("/users/logout", null, token);
-                        clearToken();
-                        clearId();
-                        router.push("/");
-                    }}>Sign Out</Button>
+                <div className={mainStyles.sidebarBottom}>
+                    <Tooltip title="Sign Out" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => {
+                            apiService.put("/users/logout", null, token);
+                            clearToken();
+                            clearId();
+                            router.push("/");
+                        }}>
+                            <LogoutOutlined/>
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="My Profile" placement="right">
+                        <div className={mainStyles.sbAvatar}
+                             style={{backgroundColor: getAvatarColor(me?.username ?? "")}}
+                             onClick={() => router.push(`/users/${loggedInId}`)}>
+                            {getAvatarInitials(me?.username ?? "")}
+                        </div>
+                    </Tooltip>
                 </div>
-            </div>
-            <div className={mainStyles.mainContent}>
+            </aside>
+            <div className={mainStyles.container}>
+                <Button icon={<ArrowLeftOutlined/>} type="text"
+                        onClick={() => router.push(`/mainpage`)} style={{marginBottom: 16}}>
+                    Back
+                </Button>
+                <div className={mainStyles.mainContent}>
                 <div className={mainStyles.userOverview}>
                     <div style={{fontSize: 24, fontWeight: 600, marginBottom: 16}}>Friends ({friends.length})</div>
                     <div className={mainStyles.userGrid}>
@@ -145,6 +181,7 @@ const FriendsPage: React.FC = () => {
                 )}
 
             </div>
+        </div>
         </div>
     );
 };
