@@ -12,7 +12,7 @@ import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileT
 import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 import Image from "next/image";
 import {PasswordInput} from "antd-password-input-strength";
-import styles from "@/styles/mainpage.module.css";
+
 
 
 interface FormFieldProps {
