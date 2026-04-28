@@ -1,8 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Button, Spin } from "antd";
-import { DeleteOutlined, DownloadOutlined, EyeOutlined, FileTextOutlined, LogoutOutlined } from "@ant-design/icons";
+import { Button, Spin, Badge, Tooltip } from "antd";
+import { DeleteOutlined, DownloadOutlined, EyeOutlined, FileTextOutlined, LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import Image from "next/image";
 import mainStyles from "@/styles/mainpage.module.css";
 import styles from "./transcripts.module.css";
@@ -10,6 +10,8 @@ import { useApi } from "@/hooks/useApi";
 import { useAuth } from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import { DocumentItem, UserDocumentsGetDTO } from "@/types/transcript";
+import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
+import {User} from "@/types/user";
 
 const TranscriptsPage: React.FC = () => {
     const router = useRouter();
@@ -18,9 +20,11 @@ const TranscriptsPage: React.FC = () => {
     const { token, isReady } = useAuth();
     const { clear: clearToken } = useLocalStorage<string>("token", "");
     const { clear: clearId } = useLocalStorage<string>("id", "");
+    const { value: loggedInId } = useLocalStorage<string>("id", "");
 
     const [items, setItems] = useState<DocumentItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [me, setMe] = useState<User | null>(null);
 
     useEffect(() => {
         if (!isReady) return;
@@ -41,6 +45,8 @@ const TranscriptsPage: React.FC = () => {
             } finally {
                 setLoading(false);
             }
+            const fetchedMe: User = await apiService.get<User>(`/users/${loggedInId}`, token);
+            setMe(fetchedMe);
         };
 
         fetchDocuments();
@@ -100,29 +106,57 @@ const TranscriptsPage: React.FC = () => {
     }
 
     return (
-        <div className={mainStyles.container}>
-            <div className={mainStyles.navbar}>
-                <div className={mainStyles.logoWrapper}>
-                    <Image
-                        src="/unnamed-Photoroom.png"
-                        alt="CommunicALL"
-                        width={200}
-                        height={55}
-                        style={{ width: "auto", maxWidth: "200px", height: "100%", maxHeight: "55px" }}
-                        onClick={() => router.push("/mainpage")}
-                    />
+        <div className={mainStyles.appShell}>
+            <aside className={mainStyles.sidebar}>
+                <div className={mainStyles.sidebarTop}>
+                    <div className={mainStyles.sbLogo}>
+                        <Image src="/banner_logo.png" alt="Logo" width={32} height={32}
+                               style={{width: 32, height: 32, objectFit: 'contain'}}/>
+                    </div>
+                    <Tooltip title="Rooms" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => router.push("/mainpage")}>
+                            <AppstoreOutlined/>
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Friends" placement="right">
+                        <Badge count={me?.pendingFriendRequests?.length ?? 0} size="small" offset={[-4, 4]}>
+                            <div className={mainStyles.sbIcon} onClick={() => router.push(`/users/${loggedInId}/friends`)}>
+                                <TeamOutlined/>
+                            </div>
+                        </Badge>
+                    </Tooltip>
+                    <Tooltip title="Transcripts & Notes" placement="right">
+                        <div className={`${mainStyles.sbIcon} ${mainStyles.sbIconActive}`}>
+                            <FileTextOutlined/>
+                        </div>
+                    </Tooltip>
                 </div>
-                <div className={mainStyles.navButtons}>
-                    <Button color="default" variant="text" onClick={() => router.push(`/users/${id}`)}>
-                        ← Back
-                    </Button>
-                    <Button color="danger" variant="text" icon={<LogoutOutlined />} onClick={handleLogout}>
-                        Sign Out
-                    </Button>
+                <div className={mainStyles.sidebarBottom}>
+                    <Tooltip title="Sign Out" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => {
+                            apiService.put("/users/logout", null, token);
+                            clearToken();
+                            clearId();
+                            router.push("/");
+                        }}>
+                            <LogoutOutlined/>
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="My Profile" placement="right">
+                        <div className={mainStyles.sbAvatar}
+                             style={{backgroundColor: getAvatarColor(me?.username ?? "")}}
+                             onClick={() => router.push(`/users/${id}`)}>
+                            {getAvatarInitials(me?.username ?? "")}
+                        </div>
+                    </Tooltip>
                 </div>
-            </div>
-
-            <div className={mainStyles.mainContent}>
+            </aside>
+            <div className={mainStyles.container}>
+                <Button icon={<ArrowLeftOutlined/>} type="text"
+                        onClick={() => router.push(`/mainpage`)} style={{marginBottom: 16}}>
+                    Back
+                </Button>
+                <div className={mainStyles.mainContent}>
                 <h1 className={styles.pageTitle}>Available Transcripts &amp; Notes</h1>
 
                 {items.length === 0 ? (
@@ -224,6 +258,7 @@ const TranscriptsPage: React.FC = () => {
                     </div>
                 )}
             </div>
+        </div>
         </div>
     );
 };

@@ -1,10 +1,17 @@
 "use client";
 
 import React, {useEffect, useState} from 'react';
-import {Card, Button, Typography, message, Tag, ConfigProvider, Modal, Input, Select, Form, Badge} from 'antd';
+import {Card, Button, Typography, message, Tag, ConfigProvider, Modal, Input, Select, Form, Badge, Tooltip} from 'antd';
 import Image from 'next/image';
 import styles from "@/styles/mainpage.module.css";
-import {LogoutOutlined, UserOutlined, UsergroupAddOutlined, TeamOutlined} from '@ant-design/icons';
+import {
+    LogoutOutlined,
+    UserOutlined,
+    UsergroupAddOutlined,
+    TeamOutlined,
+    AppstoreOutlined,
+    FileTextOutlined
+} from '@ant-design/icons';
 import {useRouter} from 'next/navigation';
 import {User} from "@/types/user";
 import {useApi} from "@/hooks/useApi";
@@ -182,43 +189,57 @@ const HomePage: React.FC = () => {
     };
 
     return (
-        <div className={styles.container}>
-            <div className={styles.navbar}>
-                <div className={styles.logoWrapper}>
-                    <Image
-                        src="/unnamed-Photoroom.png"
-                        alt="Logo"
-                        width={200}
-                        height={55}
-                        style={{
-                            width: "auto",
-                            maxWidth: "200px",
-                            height: "100%",
-                            maxHeight: "55px",
-                            display: "block",
-                            margin: "0 auto"
-                        }}
-                    />
-                </div>
-                <div className={styles.navButtons}>
-                    <Button color="default" variant="text" icon={<UserOutlined/>}
-                            onClick={() => router.push(`/users/${userId}`)}>
-                        My Profile
-                    </Button>
-                    <Badge count={user?.pendingFriendRequests?.length ?? 0} size="small">
-                        <Button color="default" variant="outlined" icon={<TeamOutlined/>}
-                                onClick={() => router.push(`/users/${userId}/friends`)}>
-                            Friends
-                        </Button>
-                    </Badge>
-                    <Button onClick={handleLogout} color="danger" variant="text" icon={<LogoutOutlined/>}>
-                        Sign Out
-                    </Button>
-                </div>
-            </div>
+        <div className={styles.appShell}>
 
+            <aside className={styles.sidebar}>
+                <div className={styles.sidebarTop}>
+                    <div className={styles.sbLogo}>
+                        <Image
+                            src="/banner_logo.png"
+                            alt="Logo"
+                            width={32}
+                            height={32}
+                            style={{width: 32, height: 32, objectFit: 'contain'}}
+                        />
+                    </div>
+                    <Tooltip title="Rooms" placement="right">
+                        <div className={`${styles.sbIcon} ${styles.sbIconActive}`}>
+                            <AppstoreOutlined/>
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Friends" placement="right">
+                        <Badge count={user?.pendingFriendRequests?.length ?? 0} size="small" offset={[-4, 4]}>
+                            <div className={styles.sbIcon} onClick={() => router.push(`/users/${userId}/friends`)}>
+                                <TeamOutlined/>
+                            </div>
+                        </Badge>
+                    </Tooltip>
+                    <Tooltip title="Transcripts & Notes" placement="right">
+                        <div className={styles.sbIcon} onClick={() => router.push(`/users/${userId}/transcripts`)}>
+                            <FileTextOutlined/>
+                        </div>
+                    </Tooltip>
+                </div>
+                <div className={styles.sidebarBottom}>
+                    <Tooltip title="Sign Out" placement="right">
+                        <div className={styles.sbIcon} onClick={handleLogout}>
+                            <LogoutOutlined/>
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="My Profile" placement="right">
+                        <div
+                            className={styles.sbAvatar}
+                            style={{backgroundColor: getAvatarColor(user?.username ?? "")}}
+                            onClick={() => router.push(`/users/${userId}`)}
+                        >
+                            {getAvatarInitials(user?.username ?? "")}
+                        </div>
+                    </Tooltip>
+                </div>
+            </aside>
 
-            <div className={styles.mainContent}>
+            <div className={styles.container}>
+                <div className={styles.mainContent}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                     <Title level={2} className={styles.title} style={{margin: 0}}>Available Rooms</Title>
                     <Button type="primary" onClick={() => setIsPrivateModalOpen(true)}
@@ -487,8 +508,7 @@ const HomePage: React.FC = () => {
                     </Modal>
                 </div>
                 <Paragraph className={styles.userSubtitle}>
-                    {users.filter((user) => user.status === "ONLINE").length} user online • Click to view profile and
-                    start a call
+                    {users.filter((user) => user.status === "ONLINE").length} user online • Click to view profile
                 </Paragraph>
                 <div className={styles.userGrid}>
                     {users.length > 0 ? (
@@ -563,6 +583,7 @@ const HomePage: React.FC = () => {
                     )}
                 </div>
             </div>
+        </div>
         </div>
     );
 };
