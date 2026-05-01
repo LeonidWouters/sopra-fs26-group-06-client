@@ -122,7 +122,7 @@ const RoomPage: React.FC = () => {
         const sessionId = crypto.randomUUID();
         let transcript = "";
         for (const m of messages) {
-            transcript+= m.timestamp + " : " + m.message + "\n\n";
+            transcript+= m.timestamp + ", " + (m.client ? myUsername : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner")) + " : " + m.message + "\n\n";
         }
         if(transcript != "" && callStarted){
             try {
@@ -352,13 +352,13 @@ const RoomPage: React.FC = () => {
         const remoteMessage : textMsg = {
             message : data,
             client: false,
-            timestamp: new Date().toLocaleDateString([], { hour: '2-digit', minute: '2-digit' })
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
 
         const localMessage : textMsg = {
             message : data,
             client : true,
-            timestamp : new Date().toLocaleDateString([], { hour: '2-digit', minute: '2-digit' })
+            timestamp : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
 
         wsRef.current?.send(JSON.stringify({
@@ -894,7 +894,7 @@ const RoomPage: React.FC = () => {
                         <Drawer title="Chat History" open={chatHistory} onClose={closeChat} placement="left" mask={false}>
                             {messages.map((msg, index) => (
                                 <div key={index} style={{padding: "8px 12px", marginBottom: 8, backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: 8, color: "white"}}>
-                                    {msg.timestamp + " : " + msg.message}
+                                    {msg.timestamp + ", " + (msg.client ? myUsername : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner")) + " : " + msg.message}
                                 </div>
                             ))}</Drawer>
                     <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
