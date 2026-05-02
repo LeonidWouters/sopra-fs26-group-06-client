@@ -697,6 +697,7 @@ const RoomPage: React.FC = () => {
     }
 
     return (
+        <>
         <div style={{display: "flex", flexDirection: "column", width: "100%", height: "100vh"}}>
 
             <div className={styles.navbar}>
@@ -1023,6 +1024,7 @@ const RoomPage: React.FC = () => {
         >
             <p>Download your transcript and notes as a ZIP?</p>
         </Modal>
+        </>
     );
 };
 
