@@ -77,7 +77,7 @@ const DocumentViewerPage: React.FC = () => {
         <div className={mainStyles.appShell}>
             <aside className={mainStyles.sidebar}>
                 <div className={mainStyles.sidebarTop}>
-                    <div className={mainStyles.sbLogo}>
+                    <div className={mainStyles.sbLogo} onClick={() => router.push('/mainpage')} style={{cursor: 'pointer'}}>
                         <Image src="/banner_logo.png" alt="Logo" width={32} height={32}
                                style={{width: 32, height: 32, objectFit: 'contain'}}/>
                     </div>

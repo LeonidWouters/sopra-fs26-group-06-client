@@ -701,7 +701,7 @@ const RoomPage: React.FC = () => {
         <div style={{display: "flex", flexDirection: "column", width: "100%", height: "100vh"}}>
 
             <div className={styles.navbar}>
-                <div className={styles.logoWrapper}>
+                <div className={styles.logoWrapper} onClick={() => router.push('/mainpage')} style={{cursor: 'pointer'}}>
                     <Image
                         src="/unnamed-Photoroom.png"
                         alt="CommunicALL"
