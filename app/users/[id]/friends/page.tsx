@@ -7,7 +7,7 @@ import {User} from "@/types/user";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import {useAuth} from "@/hooks/useAuth";
 import mainStyles from "@/styles/mainpage.module.css";
-import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined} from "@ant-design/icons";
+import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined, UserDeleteOutlined} from "@ant-design/icons";
 import Image from "next/image";
 import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 
@@ -48,6 +48,12 @@ const FriendsPage: React.FC = () => {
         await apiService.put(`/users/${id}/friend-request/accept`, {senderId: Number(senderId)}, token);
         const r: User[] = await apiService.get(`/users/${id}/friend-requests`, token);
         setPendingRequests(r);
+        const f: User[] = await apiService.get(`/users/${id}/friends`, token);
+        setFriends(f);
+    };
+
+    const handleRemoveFriend = async (friendId: string) => {
+        await apiService.delete(`/users/${id}/friends/${friendId}`, token);
         const f: User[] = await apiService.get(`/users/${id}/friends`, token);
         setFriends(f);
     };
@@ -138,8 +144,14 @@ const FriendsPage: React.FC = () => {
                                           }}>@{friend.username}</span>
                                       </div>
                                   }
-                                  extra={<Tag
-                                      color={friend.status === "ONLINE" ? "green" : "red"}>{friend.status}</Tag>}
+                                  extra={
+                                      <div style={{display: "flex", gap: 8, alignItems: "center"}}>
+                                          <Tag color={friend.status === "ONLINE" ? "green" : "red"}>{friend.status}</Tag>
+                                          <Button size="small" danger icon={<UserDeleteOutlined/>}
+                                              onClick={(e) => { e.stopPropagation(); handleRemoveFriend(String(friend.id)); }}
+                                          />
+                                      </div>
+                                  }
                                   variant="borderless"
                                   styles={{
                                       header: {
