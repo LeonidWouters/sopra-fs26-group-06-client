@@ -10,8 +10,9 @@ import dynamic from 'next/dynamic';
 import {User} from "@/types/user";
 import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
-import {AudioMutedOutlined, AudioOutlined, CloseCircleOutlined, CommentOutlined, SoundOutlined} from "@ant-design/icons";
+import {AudioMutedOutlined, AudioOutlined, CloseCircleOutlined, CommentOutlined, DownloadOutlined, SoundOutlined} from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
+import JSZip from "jszip";
 
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), {ssr: false});
@@ -100,6 +101,8 @@ const RoomPage: React.FC = () => {
     const [incomingOffer, setIncomingOffer] = useState<RTCSessionDescriptionInit | null>(null);
     const pendingCandidates = useRef<RTCIceCandidate[]>([]);
     const [sttEnabledBool, setSttEnabledBool] = useState<boolean>(false);
+    const [showDownloadModal, setShowDownloadModal] = useState<boolean>(false);
+    const downloadDataRef = useRef<{transcript: string; notes: string}>({transcript: "", notes: ""});
     const [lang,setLang] = useState<string>("English");
     const [accent,setAccent] = useState<string[]>(langs[7][1]);
     const [currentAccent,setCurrentAccent] = useState<string>(accent[0]);
@@ -124,6 +127,7 @@ const RoomPage: React.FC = () => {
         for (const m of messages) {
             transcript+= m.timestamp + ", " + (m.client ? myUsername : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner")) + " : " + m.message + "\n\n";
         }
+        downloadDataRef.current = {transcript, notes: markdownText};
         if(transcript != "" && callStarted){
             try {
                 await apiService.post("/transcripts",{
@@ -150,6 +154,22 @@ const RoomPage: React.FC = () => {
             }
         }
         await apiService.put(`/rooms/${id}/leave`, null, token);
+        setShowDownloadModal(true);
+    };
+
+    const handleDownload = async () => {
+        const date = new Date().toISOString().slice(0, 10);
+        const zip = new JSZip();
+        zip.file(`transcript_${date}.txt`, downloadDataRef.current.transcript);
+        zip.file(`notes_${date}.md`, downloadDataRef.current.notes);
+        const zipBlob = await zip.generateAsync({type: "blob"});
+        const downloadUrl = URL.createObjectURL(zipBlob);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = downloadUrl;
+        downloadLink.download = `CommunicALL_${date}.zip`;
+        downloadLink.click();
+        URL.revokeObjectURL(downloadUrl);
+        setShowDownloadModal(false);
         router.push("/mainpage");
     };
 
@@ -992,6 +1012,17 @@ const RoomPage: React.FC = () => {
 
             </div>
         </div>
+        <Modal
+            title="Download your files"
+            open={showDownloadModal}
+            onOk={handleDownload}
+            onCancel={() => { setShowDownloadModal(false); router.push("/mainpage"); }}
+            okText="Download ZIP"
+            cancelText="Skip"
+            okButtonProps={{icon: <DownloadOutlined/>}}
+        >
+            <p>Download your transcript and notes as a ZIP?</p>
+        </Modal>
     );
 };
 
