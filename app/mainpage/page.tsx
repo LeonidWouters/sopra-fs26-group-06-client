@@ -53,6 +53,7 @@ const HomePage: React.FC = () => {
     const [privateRoomDesc, setPrivateRoomDesc] = useState("");
     const [inviteeUsername, setInviteeUsername] = useState<string | null>(null);
     const [notifiedRoomIds, setNotifiedRoomIds] = useState<number[]>([]);
+    const [showScrollTop, setShowScrollTop] = useState(false);
     const showModal = () => {
         setIsModalOpen(true);
     };
@@ -180,6 +181,12 @@ const HomePage: React.FC = () => {
     };
 
     const {clear: clearToken} = useLocalStorage<string>("token", "");
+
+    useEffect(() => {
+        const onScroll = () => setShowScrollTop(window.scrollY > 300);
+        window.addEventListener("scroll", onScroll);
+        return () => window.removeEventListener("scroll", onScroll);
+    }, []);
 
     const handleLogout = (): void => {
         apiService.put("/users/logout", null, token);
@@ -582,6 +589,15 @@ const HomePage: React.FC = () => {
                 </div>
             </div>
         </div>
+        {showScrollTop && (
+            <button
+                className={styles.scrollTopBtn}
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                aria-label="Scroll to top"
+            >
+                ↑
+            </button>
+        )}
         </div>
     );
 };

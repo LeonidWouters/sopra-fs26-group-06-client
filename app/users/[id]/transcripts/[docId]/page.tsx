@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button, Spin, Badge, Tooltip } from "antd";
-import { LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined } from "@ant-design/icons";
+import { LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined, DownloadOutlined } from "@ant-design/icons";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import mainStyles from "@/styles/mainpage.module.css";
@@ -65,6 +65,20 @@ const DocumentViewerPage: React.FC = () => {
         router.push("/");
     };
 
+    const handleDownload = (): void => {
+        const filename = `${kind}-${createdAt}.txt`;
+        const blob = new Blob([content], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
+    const sizeKb = Math.max(1, Math.round(new TextEncoder().encode(content).length / 1024));
+
     if (!isReady || loading) {
         return (
             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
@@ -126,22 +140,54 @@ const DocumentViewerPage: React.FC = () => {
                     Back
                 </Button>
                 <div className={mainStyles.mainContent}>
-                <div style={{
-                    maxWidth: 800,
-                    margin: "0 auto",
-                    background: "#fff",
-                    borderRadius: 12,
-                    padding: "40px 48px",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
-                }}>
-                    <div style={{ marginBottom: 24 }}>
-                        <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>
-                            {kind === "note" ? "Note" : "Transcript"} — {createdAt}
-                        </h1>
+                <div style={{ maxWidth: 820, margin: "0 auto" }}>
+                    <div style={{
+                        background: "#F5EFFD",
+                        border: "1px solid #E0CCF5",
+                        borderRadius: 14,
+                        padding: "24px 36px",
+                        marginBottom: 16,
+                        boxShadow: "0 4px 24px rgba(107,33,214,0.08)",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: 16,
+                    }}>
+                        <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                                <span style={{
+                                    padding: "3px 12px",
+                                    borderRadius: 12,
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    background: kind === "note" ? "#dcfce7" : "#ede9fe",
+                                    color: kind === "note" ? "#059669" : "#6d28d9",
+                                }}>
+                                    {kind === "note" ? "Note" : "Transcript"}
+                                </span>
+                                <span style={{ fontSize: 13, color: "#9ca3af" }}>{createdAt}</span>
+                            </div>
+                            <h1 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 8px", color: "#111827" }}>
+                                {kind === "note" ? "Note" : "Transcript"} — {createdAt}
+                            </h1>
+                            <div style={{ fontSize: 13, color: "#9ca3af" }}>
+                                {wordCount} word{wordCount !== 1 ? "s" : ""} · {sizeKb} KB
+                            </div>
+                        </div>
+                        <Button icon={<DownloadOutlined />} onClick={handleDownload} style={{ borderRadius: 8, flexShrink: 0 }}>
+                            Download
+                        </Button>
                     </div>
-                    <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", marginBottom: 32 }} />
-                    <div style={{ lineHeight: 1.8, color: "#1a1a1a" }}>
-                        <ReactMarkdown>{content}</ReactMarkdown>
+                    <div style={{
+                        background: "#F5EFFD",
+                        border: "1px solid #E0CCF5",
+                        borderRadius: 14,
+                        padding: "36px 48px",
+                        boxShadow: "0 4px 24px rgba(107,33,214,0.08)",
+                    }}>
+                        <div style={{ lineHeight: 1.9, color: "#1a1a1a", fontSize: 15 }}>
+                            <ReactMarkdown>{content}</ReactMarkdown>
+                        </div>
                     </div>
                 </div>
             </div>
