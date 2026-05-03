@@ -134,11 +134,11 @@ const FriendsPage: React.FC = () => {
                                           <span style={{
                                               fontSize: 16,
                                               fontWeight: 600,
-                                              color: "#ffffff"
+                                              color: "#1a1a2e"
                                           }}>{friend.name}</span>
                                           <span style={{
                                               fontSize: 12,
-                                              color: "#a0a0b8",
+                                              color: "#6b21d6",
                                               fontWeight: "normal",
                                               marginTop: 1
                                           }}>@{friend.username}</span>
@@ -155,13 +155,13 @@ const FriendsPage: React.FC = () => {
                                   variant="borderless"
                                   styles={{
                                       header: {
-                                          backgroundColor: "rgba(44, 44, 84, 0.95)",
-                                          borderBottom: "1px solid rgba(255,255,255,0.1)"
+                                          backgroundColor: "rgba(245, 239, 253, 0.95)",
+                                          borderBottom: "1px solid #E0CCF5"
                                       },
-                                      body: {backgroundColor: "rgba(64, 64, 122, 0.85)", cursor: "pointer"}
+                                      body: {backgroundColor: "rgba(245, 239, 253, 0.85)", cursor: "pointer"}
                                   }}
                             >
-                                <p style={{color: "#e2e8f0", margin: 0}}>{friend.bio}</p>
+                                <p style={{color: "#4a5565", margin: 0}}>{friend.bio}</p>
                             </Card>
                         ))}
                     </div>
