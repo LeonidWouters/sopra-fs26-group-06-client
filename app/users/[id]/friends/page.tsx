@@ -1,5 +1,5 @@
 "use client";
-import {Button, Card, Tag, Badge, Tooltip} from "antd";
+import {Button, Card, Tag, Badge, Tooltip, Modal} from "antd";
 import React, {useEffect, useState} from "react";
 import {useParams, useRouter} from "next/navigation";
 import {useApi} from "@/hooks/useApi";
@@ -126,7 +126,23 @@ const FriendsPage: React.FC = () => {
                 <div className={mainStyles.userOverview}>
                     <div style={{fontSize: 24, fontWeight: 600, marginBottom: 16}}>Friends ({friends.length})</div>
                     <div className={mainStyles.userGrid}>
-                        {friends.length === 0 ? <p>No friends yet.</p> : friends.map((friend) => (
+                        {friends.length === 0 ? (
+                            <div style={{
+                                gridColumn: "1 / -1",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                padding: "64px 24px",
+                                background: "#F5EFFD",
+                                borderRadius: 14,
+                                border: "1px solid #E0CCF5",
+                                textAlign: "center",
+                            }}>
+                                <TeamOutlined style={{fontSize: 52, color: "#c4b5fd", marginBottom: 16}}/>
+                                <div style={{fontSize: 18, fontWeight: 600, color: "#374151", marginBottom: 8}}>No friends yet</div>
+                                <div style={{fontSize: 14, color: "#9ca3af"}}>Browse users on the main page and send a friend request.</div>
+                            </div>
+                        ) : friends.map((friend) => (
                             <Card key={friend.id} className={mainStyles.card}
                                   onClick={() => router.push(`/users/${friend.id}`)}
                                   title={
@@ -170,7 +186,16 @@ const FriendsPage: React.FC = () => {
                                       <div style={{display: "flex", gap: 8, alignItems: "center"}}>
                                           <Tag color={friend.status === "ONLINE" ? "green" : "red"}>{friend.status}</Tag>
                                           <Button size="small" danger icon={<UserDeleteOutlined/>}
-                                              onClick={(e) => { e.stopPropagation(); handleRemoveFriend(String(friend.id)); }}
+                                              onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  Modal.confirm({
+                                                      title: "Remove friend?",
+                                                      content: `Remove ${friend.name ?? friend.username} from your friends?`,
+                                                      okText: "Remove",
+                                                      okButtonProps: { danger: true },
+                                                      onOk: () => handleRemoveFriend(String(friend.id)),
+                                                  });
+                                              }}
                                           />
                                       </div>
                                   }

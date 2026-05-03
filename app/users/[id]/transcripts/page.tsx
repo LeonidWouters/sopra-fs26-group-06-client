@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Button, Spin, Badge, Tooltip } from "antd";
+import { Button, Spin, Badge, Tooltip, Modal } from "antd";
 import { DeleteOutlined, DownloadOutlined, EyeOutlined, FileTextOutlined, LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import Image from "next/image";
 import mainStyles from "@/styles/mainpage.module.css";
@@ -166,8 +166,9 @@ const TranscriptsPage: React.FC = () => {
 
                 {items.length === 0 ? (
                     <div className={styles.emptyState}>
-                        <FileTextOutlined style={{ fontSize: 48, color: "#c4b5fd" }} />
-                        <p>No transcripts or notes yet.</p>
+                        <FileTextOutlined style={{ fontSize: 56, color: "#c4b5fd" }} />
+                        <p>No transcripts or notes yet</p>
+                        <span>Join a call to generate transcripts, or take notes during a session.</span>
                     </div>
                 ) : (
                     <div className={styles.grid}>
@@ -176,7 +177,13 @@ const TranscriptsPage: React.FC = () => {
                                 <button
                                     className={styles.deleteBtn}
                                     aria-label="Delete"
-                                    onClick={() => handleDelete(item)}
+                                    onClick={() => Modal.confirm({
+                                        title: `Delete ${item.kind}?`,
+                                        content: "This cannot be undone.",
+                                        okText: "Delete",
+                                        okButtonProps: { danger: true },
+                                        onOk: () => handleDelete(item),
+                                    })}
                                 >
                                     <DeleteOutlined />
                                 </button>
@@ -227,7 +234,7 @@ const TranscriptsPage: React.FC = () => {
                                         left: 0,
                                         right: 0,
                                         height: 20,
-                                        background: "linear-gradient(to bottom, transparent, white)",
+                                        background: "linear-gradient(to bottom, transparent, #F5EFFD)",
                                         pointerEvents: "none",
                                     }}/>
                                 </div>
