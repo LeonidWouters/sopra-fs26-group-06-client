@@ -131,6 +131,7 @@ const FriendsPage: React.FC = () => {
                                   onClick={() => router.push(`/users/${friend.id}`)}
                                   title={
                                       <div style={{display: "flex", alignItems: "center", gap: 10, padding: "4px 0"}}>
+                                          {/* Profilbild Logik */}
                                           <div style={{
                                               width: 36, height: 36, borderRadius: "50%",
                                               backgroundColor: friend?.profilePicture ? "transparent" : getAvatarColor(friend?.username ?? ""),
@@ -144,9 +145,24 @@ const FriendsPage: React.FC = () => {
                                                   getAvatarInitials(friend?.username ?? "")
                                               )}
                                           </div>
-                                          <div style={{display: "flex", flexDirection: "column", lineHeight: "1.2"}}>
-                                              <span style={{fontSize: 16, fontWeight: 600, color: "#ffffff"}}>{friend.name}</span>
-                                              <span style={{fontSize: 12, color: "#a0a0b8", fontWeight: "normal", marginTop: 1}}>@{friend.username}</span>
+                                          
+                                          {/* Text Logik aus dem dev Branch */}
+                                          <div style={{
+                                              display: "flex",
+                                              flexDirection: "column",
+                                              lineHeight: "1.2"
+                                          }}>
+                                              <span style={{
+                                                  fontSize: 16,
+                                                  fontWeight: 600,
+                                                  color: "#1a1a2e"
+                                              }}>{friend.name}</span>
+                                              <span style={{
+                                                  fontSize: 12,
+                                                  color: "#6b21d6",
+                                                  fontWeight: "normal",
+                                                  marginTop: 1
+                                              }}>@{friend.username}</span>
                                           </div>
                                       </div>
                                   }
@@ -161,13 +177,13 @@ const FriendsPage: React.FC = () => {
                                   variant="borderless"
                                   styles={{
                                       header: {
-                                          backgroundColor: "rgba(44, 44, 84, 0.95)",
-                                          borderBottom: "1px solid rgba(255,255,255,0.1)"
+                                          backgroundColor: "rgba(245, 239, 253, 0.95)",
+                                          borderBottom: "1px solid #E0CCF5"
                                       },
-                                      body: {backgroundColor: "rgba(64, 64, 122, 0.85)", cursor: "pointer"}
+                                      body: {backgroundColor: "rgba(245, 239, 253, 0.85)", cursor: "pointer"}
                                   }}
                             >
-                                <p style={{color: "#e2e8f0", margin: 0}}>{friend.bio}</p>
+                                <p style={{color: "#4a5565", margin: 0}}>{friend.bio}</p>
                             </Card>
                         ))}
                     </div>

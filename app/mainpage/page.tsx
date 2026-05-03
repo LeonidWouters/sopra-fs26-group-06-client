@@ -255,6 +255,18 @@ const HomePage: React.FC = () => {
                     </Button>
                 </div>
 
+                <div className={styles.statsBar}>
+                    <span className={styles.statItem}>
+                        <span className={styles.statDot} style={{background: "#22c55e"}}/>
+                        {rooms.filter(r => r.roomStatus !== "FULL").length} rooms available
+                    </span>
+                    <span className={styles.statSep}>·</span>
+                    <span className={styles.statItem}>
+                        <span className={styles.statDot} style={{background: "#6B21D6"}}/>
+                        {users.filter(u => u.status === "ONLINE").length} users online
+                    </span>
+                </div>
+
                 <Modal
                     title="Create Private Room"
                     open={isPrivateModalOpen}
@@ -342,10 +354,11 @@ const HomePage: React.FC = () => {
                                     bordered={false}
                                     styles={{
                                         header: {
-                                            backgroundColor: 'rgba(44, 44, 84, 0.95)',
-                                            borderBottom: '1px solid rgba(255,255,255,0.1)'
+                                            backgroundColor: 'rgba(44, 44, 84, 0.60)',
+                                            borderBottom: '1px solid rgba(255,255,255,0.12)',
+                                            backdropFilter: 'blur(8px)',
                                         },
-                                        body: {backgroundColor: 'rgba(64, 64, 122, 0.85)'}
+                                        body: {backgroundColor: 'rgba(64, 64, 122, 0.50)', backdropFilter: 'blur(8px)'}
                                     }}
                                 >
                                     <Paragraph style={{color: '#e2e8f0'}}>{room.description}</Paragraph>
