@@ -2,7 +2,7 @@
 
 import React, {useEffect, useRef, useState} from 'react';
 import {useParams, useRouter} from 'next/navigation';
-import {Button, Drawer, Form, Input, Modal, notification, Popover, Segmented, Select, Space, Spin} from "antd";
+import {Button, Drawer, Form, Input, Modal, notification, Popover, Segmented, Select, Slider, Space, Spin} from "antd";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
@@ -10,7 +10,10 @@ import dynamic from 'next/dynamic';
 import {User} from "@/types/user";
 import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
-import {AudioMutedOutlined, AudioOutlined, CloseCircleOutlined, CommentOutlined, DownloadOutlined, SoundOutlined} from "@ant-design/icons";
+import {
+    AudioMutedOutlined, AudioOutlined, CloseCircleOutlined, CommentOutlined, DownloadOutlined,
+    SettingOutlined, SoundOutlined
+} from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
 import JSZip from "jszip";
 
@@ -82,6 +85,7 @@ const RoomPage: React.FC = () => {
     const [disabilityStatusLocal, setDisabilityStatusLocal] = useState<string>("");
     const [disabilityStatusRemote, setDisabilityStatusRemote] = useState<string>("");
     const [subtitleText, setSubtitleText] = useState<string>("");
+    const [subtitleSize, setSubtitleSize] = useState<string>("16px");
     const speechRef = useRef<SpeechRecognition>(null);
     const ttsEnabledRef = useRef<boolean>(false);
     const [ttsEnabledBool,setttsEnabledBool] = useState<boolean>(false);
@@ -102,9 +106,10 @@ const RoomPage: React.FC = () => {
     const pendingCandidates = useRef<RTCIceCandidate[]>([]);
     const [sttEnabledBool, setSttEnabledBool] = useState<boolean>(false);
     const [showDownloadModal, setShowDownloadModal] = useState<boolean>(false);
+    const [showSettingsModal, setSettingsModal] = useState<boolean>(false);
     const downloadDataRef = useRef<{transcript: string; notes: string}>({transcript: "", notes: ""});
     const [lang,setLang] = useState<string>("English");
-    const [accent,setAccent] = useState<string[]>(langs[7][1]);
+    const [accent,setAccent] = useState<string[]>(langs[6][1]);
     const [currentAccent,setCurrentAccent] = useState<string>(accent[0]);
     const langRef = useRef<string>(accent[0])
 
@@ -696,6 +701,14 @@ const RoomPage: React.FC = () => {
 
     }
 
+    const showSettings = ()  => {
+        setSettingsModal(true);
+    }
+
+    const  closeSettings = () => {
+        setSettingsModal(false);
+    }
+
     return (
         <>
         <div style={{display: "flex", flexDirection: "column", width: "100%", height: "100vh"}}>
@@ -821,7 +834,7 @@ const RoomPage: React.FC = () => {
                                 color: "#ffffff",
                                 padding: "10px 24px",
                                 borderRadius: "8px",
-                                fontSize: "16px",
+                                fontSize: subtitleSize,
                                 fontWeight: 500,
                                 maxWidth: "80%",
                                 textAlign: "center",
@@ -960,6 +973,14 @@ const RoomPage: React.FC = () => {
                         </Popover>
                             </Space.Compact>) : null}
                         </Space>
+                        <Space size="small" align="center">
+                            <Modal title={"Settings"} onCancel={() => closeSettings()} open={showSettingsModal} okText={"Apply"} onOk={() => closeSettings()}>
+                                <h4>Subtitle Size</h4>
+                                <p style={{fontSize : subtitleSize, alignContent:"center"}}>Example Text</p>
+                                <Slider style={{width: "50%"}} defaultValue={16} min={8} max={40} onChange={(value) => setSubtitleSize(value.toString()+"px")}></Slider>
+                            </Modal>
+                            <Button icon={<SettingOutlined/>} onClick={() => showSettings()}></Button>
+                        </Space>
                     </div>
 
                     </div>
@@ -1005,7 +1026,7 @@ const RoomPage: React.FC = () => {
                                 placeholder: "# Shared notes\n\nHere you can collaboratively edit notes..."
                             }}
                         />) : (
-                            <MDEditor hideToolbar={true} value = {markdownText} preview={"preview"} height={600}/>
+                            <MDEditor hideToolbar={true} value = {markdownText} preview={"preview"} height={400}/>
                             )
                         }
                     </div>
