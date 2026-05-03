@@ -104,11 +104,16 @@ const FriendsPage: React.FC = () => {
                         </div>
                     </Tooltip>
                     <Tooltip title="My Profile" placement="right">
-                        <div className={mainStyles.sbAvatar}
-                             style={{backgroundColor: getAvatarColor(me?.username ?? "")}}
-                             onClick={() => router.push(`/users/${loggedInId}`)}>
-                            {getAvatarInitials(me?.username ?? "")}
-                        </div>
+                        <div
+                            className={mainStyles.sbAvatar}
+                            style={me?.profilePicture ? {} : {backgroundColor: getAvatarColor(me?.username ?? "")}}
+                            onClick={() => router.push(`/users/${loggedInId}`)}
+                            >
+                            {me?.profilePicture
+                                ? <img src={me.profilePicture} style={{width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover"}} />
+                                : getAvatarInitials(me?.username ?? "")
+                            }
+                </div>
                     </Tooltip>
                 </div>
             </aside>
@@ -125,23 +130,24 @@ const FriendsPage: React.FC = () => {
                             <Card key={friend.id} className={mainStyles.card}
                                   onClick={() => router.push(`/users/${friend.id}`)}
                                   title={
-                                      <div style={{
-                                          display: "flex",
-                                          flexDirection: "column",
-                                          lineHeight: "1.2",
-                                          padding: "4px 0"
-                                      }}>
-                                          <span style={{
-                                              fontSize: 16,
-                                              fontWeight: 600,
-                                              color: "#ffffff"
-                                          }}>{friend.name}</span>
-                                          <span style={{
-                                              fontSize: 12,
-                                              color: "#a0a0b8",
-                                              fontWeight: "normal",
-                                              marginTop: 1
-                                          }}>@{friend.username}</span>
+                                      <div style={{display: "flex", alignItems: "center", gap: 10, padding: "4px 0"}}>
+                                          <div style={{
+                                              width: 36, height: 36, borderRadius: "50%",
+                                              backgroundColor: friend?.profilePicture ? "transparent" : getAvatarColor(friend?.username ?? ""),
+                                              display: "flex", alignItems: "center", justifyContent: "center",
+                                              fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0,
+                                              overflow: "hidden"
+                                          }}>
+                                              {friend?.profilePicture ? (
+                                                  <img src={friend.profilePicture} style={{width: "100%", height: "100%", objectFit: "cover"}} alt="Avatar" />
+                                              ) : (
+                                                  getAvatarInitials(friend?.username ?? "")
+                                              )}
+                                          </div>
+                                          <div style={{display: "flex", flexDirection: "column", lineHeight: "1.2"}}>
+                                              <span style={{fontSize: 16, fontWeight: 600, color: "#ffffff"}}>{friend.name}</span>
+                                              <span style={{fontSize: 12, color: "#a0a0b8", fontWeight: "normal", marginTop: 1}}>@{friend.username}</span>
+                                          </div>
                                       </div>
                                   }
                                   extra={

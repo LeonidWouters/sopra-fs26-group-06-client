@@ -1,5 +1,5 @@
 "use client";
-import {Button, Form, Input, Radio, Tabs, message, Badge, Tooltip} from "antd";
+import {Button, Form, Input, Radio, Tabs, message, Badge, Tooltip, Upload} from "antd";
 import React, {useEffect, useState} from "react";
 import {useParams, useRouter} from "next/navigation";
 import {useApi} from "@/hooks/useApi";
@@ -8,7 +8,7 @@ import useLocalStorage from "@/hooks/useLocalStorage";
 import {useAuth} from "@/hooks/useAuth";
 import mainStyles from "@/styles/mainpage.module.css";
 import profileStyles from "@/styles/profile.module.css";
-import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined} from "@ant-design/icons";
+import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined, CameraOutlined} from "@ant-design/icons";
 import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 import Image from "next/image";
 import {PasswordInput} from "antd-password-input-strength";
@@ -39,6 +39,40 @@ const Profile: React.FC = () => {
     const [isFriend, setIsFriend] = useState(false);
     const [requestSent, setRequestSent] = useState(false);
     const [me, setMe] = useState<User | null>(null);
+    const [uploadingPicture, setUploadingPicture] = useState(false);
+
+    const handleProfilePictureUpload = (file: File) => {
+        if (file.size > 2 * 1024 * 1024) { messageApi.open({type: "error", content: "Max 2MB"}); return false; }
+        if (!file.type.startsWith("image/")) { messageApi.open({type: "error", content: "Only pictures allowed."}); return false; }
+        setUploadingPicture(true);
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64 = e.target?.result as string;
+            try {
+                await apiService.put(`/users/${id}/profile-picture`, { profilePicture: base64 }, token);
+                setUser(prev => prev ? {...prev, profilePicture: base64} : prev);
+                setMe(prev => prev ? {...prev, profilePicture: base64} : prev);
+                messageApi.open({type: "success", content: "Profile picture updated!"});
+            } catch {
+                messageApi.open({type: "error", content: "Something went wrong."});
+            } finally {
+                setUploadingPicture(false);
+            }
+        };
+        reader.readAsDataURL(file);
+        return false;
+    };
+
+    const handleRemoveProfilePicture = async () => {
+        try {
+            await apiService.put(`/users/${id}/profile-picture`, { profilePicture: null }, token);
+            setUser(prev => prev ? {...prev, profilePicture: null} : prev);
+            setMe(prev => prev ? {...prev, profilePicture: null} : prev);
+            messageApi.open({type: "success", content: "Profile picture removed."});
+        } catch {
+            messageApi.open({type: "error", content: "Something went wrong."});
+        }
+    };
 
 
     useEffect(() => {
@@ -162,11 +196,19 @@ const Profile: React.FC = () => {
                         </div>
                     </Tooltip>
                     <Tooltip title="My Profile" placement="right">
-                        <div className={mainStyles.sbAvatar}
-                             style={{backgroundColor: getAvatarColor(me?.username ?? "")}}
-                             onClick={() => router.push(`/users/${loggedInId}`)}>
-                            {getAvatarInitials(me?.username ?? "")}
+                        <Tooltip title="My Profile" placement="right">
+                        <div
+                            className={mainStyles.sbAvatar}
+                            style={me?.profilePicture ? {} : {backgroundColor: getAvatarColor(me?.username ?? "")}}
+                            onClick={() => router.push(`/users/${loggedInId}`)}
+                        >
+                            {me?.profilePicture
+                                ? <img src={me.profilePicture} style={{width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover"}} />
+                                : getAvatarInitials(me?.username ?? "")
+                            }
                         </div>
+                    </Tooltip>
+
                     </Tooltip>
                 </div>
             </aside>
@@ -175,20 +217,29 @@ const Profile: React.FC = () => {
                 <div className={profileStyles.card}>
                     <div style={{display: "flex", alignItems: "center", justifyContent: "space-between"}}>
                         <div style={{display: "flex", alignItems: "center", gap: 24}}>
-                            <div style={{
-                                width: 88,
-                                height: 88,
-                                borderRadius: "50%",
-                                backgroundColor: getAvatarColor(user.username ?? ""),
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 28,
-                                fontWeight: 700,
-                                color: "#fff",
-                                flexShrink: 0,
-                            }}>
-                                {getAvatarInitials(user.username ?? "")}
+                            <div style={{position: "relative", display: "inline-block"}}>
+                                {user.profilePicture
+                                    ? <img src={user.profilePicture} style={{width: 88, height: 88, borderRadius: "50%", objectFit: "cover"}} />
+                                    : <div style={{width: 88, height: 88, borderRadius: "50%", backgroundColor: getAvatarColor(user.username ?? ""), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 700, color: "#fff"}}>
+                                        {getAvatarInitials(user.username ?? "")}
+                                    </div>
+                                }
+                                {isOwnProfile && (
+                                    <Upload accept="image/*" showUploadList={false} beforeUpload={handleProfilePictureUpload}>
+                                        <div style={{position: "absolute", bottom: 0, right: 0, width: 28, height: 28, borderRadius: "50%", backgroundColor: "#6B21D6", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", border: "2px solid white"}}>
+                                            <CameraOutlined style={{color: "white", fontSize: 13}}/>
+                                        </div>
+                                    </Upload>
+                                )}
+                                {isOwnProfile && user.profilePicture && (
+                                    <div
+                                        onClick={handleRemoveProfilePicture}
+                                        style={{position: "absolute", bottom: 0, left: 0, width: 28, height: 28, borderRadius: "50%", backgroundColor: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", border: "2px solid white"}}
+                                    >
+                                        <span style={{color: "white", fontSize: 13, lineHeight: 1}}>✕</span>
+                                    </div>
+                                )}
+
                             </div>
                             <div>
                                 <div style={{fontSize: 30, fontWeight: 600}}>{user.username}</div>
