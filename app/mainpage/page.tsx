@@ -229,10 +229,17 @@ const HomePage: React.FC = () => {
                     <Tooltip title="My Profile" placement="right">
                         <div
                             className={styles.sbAvatar}
-                            style={{backgroundColor: getAvatarColor(user?.username ?? "")}}
+                            style={{
+                                backgroundColor: user?.profilePicture ? "transparent" : getAvatarColor(user?.username ?? ""),
+                                overflow: "hidden"
+                            }}
                             onClick={() => router.push(`/users/${userId}`)}
                         >
-                            {getAvatarInitials(user?.username ?? "")}
+                            {user?.profilePicture ? (
+                                <img src={user.profilePicture} style={{width: "100%", height: "100%", objectFit: "cover"}} alt="Avatar"/>
+                            ) : (
+                                getAvatarInitials(user?.username ?? "")
+                            )}
                         </div>
                     </Tooltip>
                 </div>
@@ -442,43 +449,23 @@ const HomePage: React.FC = () => {
                                                 onClick={() => router.push(`/users/${user.id}`)}
                                                 className={styles.card}
                                                 title={
-                                                    <div style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: 10,
-                                                        padding: '4px 0'
-                                                    }}>
+                                                    <div style={{display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0'}}>
                                                         <div style={{
-                                                            width: 36,
-                                                            height: 36,
-                                                            borderRadius: '50%',
-                                                            backgroundColor: getAvatarColor(user.username ?? ""),
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            fontSize: 13,
-                                                            fontWeight: 700,
-                                                            color: '#fff',
-                                                            flexShrink: 0
+                                                            width: 36, height: 36, borderRadius: '50%',
+                                                            backgroundColor: user.profilePicture ? 'transparent' : getAvatarColor(user.username ?? ""),
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0,
+                                                            overflow: 'hidden'
                                                         }}>
-                                                            {getAvatarInitials(user.username ?? "")}
+                                                            {user.profilePicture ? (
+                                                                <img src={user.profilePicture} style={{width: "100%", height: "100%", objectFit: "cover"}} alt="Avatar"/>
+                                                            ) : (
+                                                                getAvatarInitials(user.username ?? "")
+                                                            )}
                                                         </div>
-                                                        <div style={{
-                                                            display: 'flex',
-                                                            flexDirection: 'column',
-                                                            lineHeight: '1.2'
-                                                        }}>
-                                                            <span style={{
-                                                                fontSize: '16px',
-                                                                fontWeight: 600,
-                                                                color: '#ffffff'
-                                                            }}>{user.name}</span>
-                                                            <span style={{
-                                                                fontSize: '12px',
-                                                                color: '#a0a0b8',
-                                                                fontWeight: 'normal',
-                                                                marginTop: '1.5px'
-                                                            }}>@{user.username}</span>
+                                                        <div style={{display: 'flex', flexDirection: 'column', lineHeight: '1.2'}}>
+                                                            <span style={{fontSize: '16px', fontWeight: 600, color: '#ffffff'}}>{user.name}</span>
+                                                            <span style={{fontSize: '12px', color: '#a0a0b8', fontWeight: 'normal', marginTop: '1.5px'}}>@{user.username}</span>
                                                         </div>
                                                     </div>
                                                 }
@@ -535,19 +522,17 @@ const HomePage: React.FC = () => {
                                     title={
                                         <div style={{display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0'}}>
                                             <div style={{
-                                                width: 36,
-                                                height: 36,
-                                                borderRadius: '50%',
-                                                backgroundColor: getAvatarColor(user.username ?? ""),
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: 13,
-                                                fontWeight: 700,
-                                                color: '#fff',
-                                                flexShrink: 0
+                                                width: 36, height: 36, borderRadius: '50%',
+                                                backgroundColor: user.profilePicture ? 'transparent' : getAvatarColor(user.username ?? ""),
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0,
+                                                overflow: 'hidden'
                                             }}>
-                                                {getAvatarInitials(user.username ?? "")}
+                                                {user.profilePicture ? (
+                                                    <img src={user.profilePicture} style={{width: "100%", height: "100%", objectFit: "cover"}} alt="Avatar"/>
+                                                ) : (
+                                                    getAvatarInitials(user.username ?? "")
+                                                )}
                                             </div>
                                             <div style={{display: 'flex', flexDirection: 'column', lineHeight: '1.2'}}>
                                                 <span style={{

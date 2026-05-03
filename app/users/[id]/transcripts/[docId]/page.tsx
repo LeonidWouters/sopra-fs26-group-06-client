@@ -107,10 +107,15 @@ const DocumentViewerPage: React.FC = () => {
                         </div>
                     </Tooltip>
                     <Tooltip title="My Profile" placement="right">
-                        <div className={mainStyles.sbAvatar}
-                             style={{backgroundColor: getAvatarColor(me?.username ?? "")}}
-                             onClick={() => router.push(`/users/${loggedInId}`)}>
-                            {getAvatarInitials(me?.username ?? "")}
+                        <div
+                            className={mainStyles.sbAvatar}
+                            style={me?.profilePicture ? {} : {backgroundColor: getAvatarColor(me?.username ?? "")}}
+                            onClick={() => router.push(`/users/${loggedInId}`)}
+                        >
+                            {me?.profilePicture
+                                ? <img src={me.profilePicture} style={{width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover"}} />
+                                : getAvatarInitials(me?.username ?? "")
+                            }
                         </div>
                     </Tooltip>
                 </div>

@@ -11,4 +11,5 @@ export interface User {
   friendCount: number | null;
   friends?: number[];
   pendingFriendRequests?: number[];
+  profilePicture?: string | null;
 }
