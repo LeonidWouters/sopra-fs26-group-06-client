@@ -10,7 +10,8 @@ import {
     UsergroupAddOutlined,
     TeamOutlined,
     AppstoreOutlined,
-    FileTextOutlined
+    FileTextOutlined,
+    CalendarOutlined,
 } from '@ant-design/icons';
 import {useRouter} from 'next/navigation';
 import {User} from "@/types/user";
@@ -224,6 +225,11 @@ const HomePage: React.FC = () => {
                     <Tooltip title="Transcripts & Notes" placement="right">
                         <div className={styles.sbIcon} onClick={() => router.push(`/users/${userId}/transcripts`)}>
                             <FileTextOutlined/>
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Calendar" placement="right">
+                        <div className={styles.sbIcon} onClick={() => router.push(`/users/${userId}/calendar`)}>
+                            <CalendarOutlined/>
                         </div>
                     </Tooltip>
                 </div>

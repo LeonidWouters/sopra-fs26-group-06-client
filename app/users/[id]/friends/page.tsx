@@ -7,7 +7,7 @@ import {User} from "@/types/user";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import {useAuth} from "@/hooks/useAuth";
 import mainStyles from "@/styles/mainpage.module.css";
-import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined, UserDeleteOutlined} from "@ant-design/icons";
+import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined, UserDeleteOutlined, CalendarOutlined} from "@ant-design/icons";
 import Image from "next/image";
 import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 
@@ -89,6 +89,11 @@ const FriendsPage: React.FC = () => {
                     <Tooltip title="Transcripts" placement="right">
                         <div className={mainStyles.sbIcon} onClick={() => router.push(`/users/${loggedInId}/transcripts`)}>
                             <FileTextOutlined/>
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Calendar" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => router.push(`/users/${loggedInId}/calendar`)}>
+                            <CalendarOutlined/>
                         </div>
                     </Tooltip>
                 </div>
