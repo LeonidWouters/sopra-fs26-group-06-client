@@ -579,10 +579,10 @@ const RoomPage: React.FC = () => {
             console.log(event.error);
             const recoverable: string[] = ["no-speech","aborted","network"];
             const restart : string[] = ["not-allowed","service-not-allowed"]
-            if(event.error in recoverable) {
+            if(recoverable.includes(event.error)) {
                 setTimeout(() => speechRef.current?.start(), 500);
             }
-            if(event.error in restart){
+            if(restart.includes(event.error)){
                 speechRef.current = null;
                 if(event.error === "not-allowed" || "service-not-allowed"){
                     console.log("user or browser blocked microphone access, retrying...")
