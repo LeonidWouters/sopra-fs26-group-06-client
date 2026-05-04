@@ -8,7 +8,7 @@ import useLocalStorage from "@/hooks/useLocalStorage";
 import {useAuth} from "@/hooks/useAuth";
 import mainStyles from "@/styles/mainpage.module.css";
 import profileStyles from "@/styles/profile.module.css";
-import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined, CameraOutlined} from "@ant-design/icons";
+import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined, CameraOutlined, CalendarOutlined} from "@ant-design/icons";
 import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 import Image from "next/image";
 import {PasswordInput} from "antd-password-input-strength";
@@ -200,6 +200,11 @@ const Profile: React.FC = () => {
                     <Tooltip title="Transcripts & Notes" placement="right">
                         <div className={mainStyles.sbIcon} onClick={() => router.push(`/users/${loggedInId}/transcripts`)}>
                             <FileTextOutlined/>
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Calendar" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => router.push(`/users/${loggedInId}/calendar`)}>
+                            <CalendarOutlined/>
                         </div>
                     </Tooltip>
                 </div>

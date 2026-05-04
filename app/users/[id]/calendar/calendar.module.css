@@ -1,0 +1,23 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.pageTitle {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+.schedulerWrapper {
+    background: #F5EFFD;
+    border: 1px solid #E0CCF5;
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 4px 24px rgba(107, 33, 214, 0.08);
+    min-height: 640px;
+    overflow: hidden;
+}

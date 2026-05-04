@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button, Spin, Badge, Tooltip } from "antd";
-import { LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined, DownloadOutlined } from "@ant-design/icons";
+import { LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined, DownloadOutlined , CalendarOutlined} from "@ant-design/icons";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import mainStyles from "@/styles/mainpage.module.css";
@@ -111,6 +111,11 @@ const DocumentViewerPage: React.FC = () => {
                         <div className={`${mainStyles.sbIcon} ${mainStyles.sbIconActive}`}
                              onClick={() => router.push(`/users/${loggedInId}/transcripts`)}>
                             <FileTextOutlined/>
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Calendar" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => router.push(`/users/${loggedInId}/calendar`)}>
+                            <CalendarOutlined/>
                         </div>
                     </Tooltip>
                 </div>
