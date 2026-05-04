@@ -31,6 +31,7 @@ const Profile: React.FC = () => {
     const {clear: clearToken,} = useLocalStorage<string>("token", "");
     const isOwnProfile = String(loggedInId) === String(id);
     const [editUsername, setEditUsername] = useState<string>("");
+    const [editName, setEditName] = useState<string>("");
     const [editBio, setEditBio] = useState<string>("");
     const [editDisability, setEditDisability] = useState<"HEARING" | "DEAF">("HEARING");
     const [level, setLevel] = useState(0);
@@ -88,6 +89,7 @@ const Profile: React.FC = () => {
                 const friendsList = await apiService.get<User[]>(`/users/${id}/friends`, token);
                 setUser(user);
                 setEditUsername(user.username ?? "");
+                setEditName(user.name ?? "");
                 setEditBio(user.bio ?? "");
                 setEditDisability(user.disabilityStatus ?? "HEARING");
                 const amIFriend = friendsList.some((friend) => {
@@ -146,9 +148,21 @@ const Profile: React.FC = () => {
         }
     };
     const handleSaveProfile = async () => {
+        if (!editUsername.trim()) {
+            messageApi.open({type: "error", content: "Username cannot be empty."});
+            return;}
+        if (!editName.trim()) {
+            messageApi.open({type: "error", content: "Name cannot be empty."});
+            return;}
+
+        if (!editBio.trim()) {
+            messageApi.open({type: "error", content: "Bio cannot be empty."});
+            return;
+        }
         try {
             await apiService.put(`/users/${id}/profile`, {
                 username: editUsername,
+                name: editName,
                 bio: editBio,
                 disabilityStatus: editDisability,
             }, token);
@@ -283,6 +297,9 @@ const Profile: React.FC = () => {
                                             <Form layout="vertical" onFinish={handleSaveProfile}>
                                                 <Form.Item label="Username">
                                                     <Input value={editUsername} onChange={e => setEditUsername(e.target.value)}/>
+                                                </Form.Item>
+                                                <Form.Item label="Name">
+                                                    <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Your full name"/>
                                                 </Form.Item>
                                                 <Form.Item label="Bio">
                                                     <Input.TextArea rows={3} value={editBio} onChange={e => setEditBio(e.target.value)} placeholder="Tell us about yourself..."/>
