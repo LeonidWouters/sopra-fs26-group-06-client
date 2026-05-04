@@ -5,7 +5,7 @@ import {useApi} from "@/hooks/useApi";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import {User} from "@/types/user";
 import {Button, ConfigProvider, Form, Input, Modal, Segmented, Select} from "antd";
-import {useState} from "react";
+import {useState, useEffect} from "react";
 import {PasswordInput} from "antd-password-input-strength";
 import Image from "next/image";
 import styles from "@/styles/page.module.css";
@@ -26,6 +26,10 @@ const Login: React.FC = () => {
     // Simply choose what you need from the hook:
     const {set: setId} = useLocalStorage<string>("id", "");
     const [authMode, setAuthMode] = useState<"login" | "register">("login");
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (token) router.push("/mainpage");
+    }, []);
     const {
         // value: token, // is commented out because we do not need the token value
         set: setToken, // we need this method to set the value of the token to the one we receive from the POST request to the backend server API
@@ -60,7 +64,7 @@ const Login: React.FC = () => {
                 Modal.error({
                     title: "Error",
                     content:
-                        "This username does not exist. Please try again or sing up!",
+                        "This username does not exist. Please try again or sign up!",
                 });
             } else if (error instanceof Error) {
                 alert(`Something went wrong during the login:\n${error.message}`);
@@ -253,14 +257,14 @@ const Login: React.FC = () => {
                                         label="Bio"
                                         className={styles.loginMask}
                                         style={{marginBottom: "12px"}}
-                                        rules={[{required: true, message: "Please enter a bio!"}]}
+                                        rules={[{required: true, message: "Please enter a bio!"}, {max: 120, message: "Bio must be max 120 characters"}]}
                                     >
                                         <Input.TextArea
                                             rows={3}
                                             placeholder="Tell something about you"
                                             count={{
                                                 show: true,
-                                                max: 60,
+                                                max: 120,
                                             }}
                                         />
                                     </Form.Item>
