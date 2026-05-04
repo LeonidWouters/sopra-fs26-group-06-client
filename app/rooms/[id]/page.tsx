@@ -2,7 +2,7 @@
 
 import React, {useEffect, useRef, useState} from 'react';
 import {useParams, useRouter} from 'next/navigation';
-import {Button, Form, Input, Segmented, Spin, Drawer, Modal, Popover, Select, notification} from "antd";
+import {Button, Drawer, Form, Input, Modal, notification, Popover, Segmented, Select, Slider, Space, Spin} from "antd";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
@@ -10,8 +10,12 @@ import dynamic from 'next/dynamic';
 import {User} from "@/types/user";
 import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
-import {CloseCircleOutlined, SoundOutlined, AudioOutlined, AudioMutedOutlined} from "@ant-design/icons";
+import {
+    AudioMutedOutlined, AudioOutlined, CloseCircleOutlined, CommentOutlined, DownloadOutlined,
+    SettingOutlined, SoundOutlined
+} from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
+import JSZip from "jszip";
 
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), {ssr: false});
@@ -24,6 +28,41 @@ export interface Room {
     CallerID: number | null;
     CalleeID: number | null;
 }
+
+const langs : ([string,string[]])[] = [
+    ['Afrikaans',        ['af-ZA']],
+    ['Bahasa Indonesia', ['id-ID']],
+    ['Bahasa Melayu',    ['ms-MY']],
+    ['Català',           ['ca-ES']],
+    ['Čeština',          ['cs-CZ']],
+    ['Deutsch',          ['de-DE']],
+    ['English',          ['en-AU', 'en-CA', 'en-IN', 'en-NZ', 'en-ZA', 'en-GB', 'en-US']],
+    ['Español',          ['es-AR', 'es-BO', 'es-CL', 'es-CO', 'es-CR', 'es-EC', 'es-SV', 'es-ES', 'es-US', 'es-GT', 'es-HN', 'es-MX', 'es-NI', 'es-PA', 'es-PY', 'es-PE', 'es-PR', 'es-DO', 'es-UY', 'es-VE']],
+    ['Euskara',          ['eu-ES']],
+    ['Français',         ['fr-FR']],
+    ['Galego',           ['gl-ES']],
+    ['Hrvatski',         ['hr_HR']],
+    ['IsiZulu',          ['zu-ZA']],
+    ['Íslenska',         ['is-IS']],
+    ['Italiano',         ['it-IT', 'it-CH']],
+    ['Magyar',           ['hu-HU']],
+    ['Nederlands',       ['nl-NL']],
+    ['Norsk bokmål',     ['nb-NO']],
+    ['Polski',           ['pl-PL']],
+    ['Português',        ['pt-BR', 'pt-PT']],
+    ['Română',           ['ro-RO']],
+    ['Slovenčina',       ['sk-SK']],
+    ['Suomi',            ['fi-FI']],
+    ['Svenska',          ['sv-SE']],
+    ['Türkçe',           ['tr-TR']],
+    ['български',        ['bg-BG']],
+    ['Pусский',          ['ru-RU']],
+    ['Српски',           ['sr-RS']],
+    ['한국어',             ['ko-KR']],
+    ['中文',              ['cmn-Hans-CN', 'cmn-Hans-HK', 'cmn-Hant-TW', 'yue-Hant-HK']],
+    ['日本語',            ['ja-JP']],
+    ['Lingua latīna',    ['la']],
+];
 
 const RoomPage: React.FC = () => {
     const router = useRouter();
@@ -46,6 +85,7 @@ const RoomPage: React.FC = () => {
     const [disabilityStatusLocal, setDisabilityStatusLocal] = useState<string>("");
     const [disabilityStatusRemote, setDisabilityStatusRemote] = useState<string>("");
     const [subtitleText, setSubtitleText] = useState<string>("");
+    const [subtitleSize, setSubtitleSize] = useState<string>("16px");
     const speechRef = useRef<SpeechRecognition>(null);
     const ttsEnabledRef = useRef<boolean>(false);
     const [ttsEnabledBool,setttsEnabledBool] = useState<boolean>(false);
@@ -55,11 +95,25 @@ const RoomPage: React.FC = () => {
     const [form] = Form.useForm();
     const userVoiceURI = useRef<string>("");
     const [isMuted, setIsMuted] = useState<boolean>(false);
+    const [volume, setVolume] = useState<number>(() => {
+        const saved = typeof window !== "undefined" ? parseFloat(localStorage.getItem("callVolume") ?? "1") : 1;
+        return isNaN(saved) ? 1 : saved;
+    });
     const [remoteMuted, setRemoteMuted] = useState<boolean>(false);
     const [editorTimeout,setEditorTimeout] = useState<boolean>(false);
     const [isMediaReady, setIsMediaReady] = useState(false);
     const [incomingOffer, setIncomingOffer] = useState<RTCSessionDescriptionInit | null>(null);
-    const pendingCandidates = useRef<any[]>([]);
+    const pendingCandidates = useRef<RTCIceCandidate[]>([]);
+    const [sttEnabledBool, setSttEnabledBool] = useState<boolean>(false);
+    const [showDownloadModal, setShowDownloadModal] = useState<boolean>(false);
+    const [showSettingsModal, setSettingsModal] = useState<boolean>(false);
+    const downloadDataRef = useRef<{transcript: string; notes: string}>({transcript: "", notes: ""});
+    const [lang,setLang] = useState<string>("English");
+    const [accent,setAccent] = useState<string[]>(langs[6][1]);
+    const [currentAccent,setCurrentAccent] = useState<string>(accent[0]);
+    const langRef = useRef<string>(accent[0])
+
+
 
     interface textMsg {
         message: string;
@@ -76,8 +130,9 @@ const RoomPage: React.FC = () => {
         const sessionId = crypto.randomUUID();
         let transcript = "";
         for (const m of messages) {
-            transcript+= m.timestamp + " : " + m.message + "\n\n";
+            transcript+= m.timestamp + ", " + (m.client ? myUsername : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner")) + " : " + m.message + "\n\n";
         }
+        downloadDataRef.current = {transcript, notes: markdownText};
         if(transcript != "" && callStarted){
             try {
                 await apiService.post("/transcripts",{
@@ -104,6 +159,22 @@ const RoomPage: React.FC = () => {
             }
         }
         await apiService.put(`/rooms/${id}/leave`, null, token);
+        setShowDownloadModal(true);
+    };
+
+    const handleDownload = async () => {
+        const date = new Date().toISOString().slice(0, 10);
+        const zip = new JSZip();
+        zip.file(`transcript_${date}.txt`, downloadDataRef.current.transcript);
+        zip.file(`notes_${date}.md`, downloadDataRef.current.notes);
+        const zipBlob = await zip.generateAsync({type: "blob"});
+        const downloadUrl = URL.createObjectURL(zipBlob);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = downloadUrl;
+        downloadLink.download = `CommunicALL_${date}.zip`;
+        downloadLink.click();
+        URL.revokeObjectURL(downloadUrl);
+        setShowDownloadModal(false);
         router.push("/mainpage");
     };
 
@@ -306,13 +377,13 @@ const RoomPage: React.FC = () => {
         const remoteMessage : textMsg = {
             message : data,
             client: false,
-            timestamp: new Date().toLocaleDateString([], { hour: '2-digit', minute: '2-digit' })
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
 
         const localMessage : textMsg = {
             message : data,
             client : true,
-            timestamp : new Date().toLocaleDateString([], { hour: '2-digit', minute: '2-digit' })
+            timestamp : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
 
         wsRef.current?.send(JSON.stringify({
@@ -371,6 +442,8 @@ const RoomPage: React.FC = () => {
             console.log(event.type);
             if (remoteRef.current) {
                 remoteRef.current.srcObject = event.streams[0];
+                const saved = parseFloat(localStorage.getItem("callVolume") ?? "1");
+                remoteRef.current.volume = isNaN(saved) ? 1 : saved;
             }
         };
 
@@ -470,8 +543,11 @@ const RoomPage: React.FC = () => {
             setChat(true);
             return;
         }
+        setSttEnabledBool(true);
         speechRef.current.continuous = true;
         speechRef.current.interimResults = true;
+        speechRef.current.lang = langRef.current;
+        console.log(lang);
         speechRef.current.start();
         console.log(speechRef.current);
 
@@ -495,13 +571,33 @@ const RoomPage: React.FC = () => {
         };
 
         speechRef.current.onend = () => {
-            setTimeout(() => speechRef.current?.start(), 500);
+            if(speechRef.current){speechRef.current.lang = langRef.current;}
+            setTimeout(() => speechRef.current?.start(), 10000);
         }
 
         speechRef.current.onerror = (event) => {
             console.log(event.error);
-            if(event.error === "network" || event.error === "no-speech" || event.error === "aborted"){
+            const recoverable: string[] = ["no-speech","aborted","network"];
+            const restart : string[] = ["not-allowed","service-not-allowed"]
+            if(event.error in recoverable) {
                 setTimeout(() => speechRef.current?.start(), 500);
+            }
+            if(event.error in restart){
+                speechRef.current = null;
+                if(event.error === "not-allowed" || "service-not-allowed"){
+                    console.log("user or browser blocked microphone access, retrying...")
+                    navigator.mediaDevices.getUserMedia({audio: true}).then(() => {
+                        startSTT();
+                    }).catch((error) => {
+                        console.log("Couldn't access microphone, starting text to text",error);
+                        startTTT();
+                    });
+                }
+            }
+            else {
+                console.log(event.error);
+                speechRef.current = null;
+                startSTT();
             }
         }
 
@@ -580,11 +676,45 @@ const RoomPage: React.FC = () => {
         }
     }, [apiService, token, isReady]);
 
+    function chooseLang(index: number) {
+        const lang = langs[index][1];
+        setAccent(lang);
+        setCurrentAccent(lang[0])
+        setLang(langs[index][0]);
+        langRef.current = currentAccent;
+        if(speechRef.current) {
+            speechRef.current.stop();
+            speechRef.current.lang = langRef.current;
+
+            notification.info({
+                title: "Language changed",
+                description: `Language was changed to ${langs[index][0]}`,
+                placement: "top",
+                duration: 2,
+            });
+        }
+    }
+
+    function chooseAccent(index: number) {
+        setCurrentAccent(accent[index]);
+        langRef.current = currentAccent;
+
+    }
+
+    const showSettings = ()  => {
+        setSettingsModal(true);
+    }
+
+    const  closeSettings = () => {
+        setSettingsModal(false);
+    }
+
     return (
+        <>
         <div style={{display: "flex", flexDirection: "column", width: "100%", height: "100vh"}}>
 
             <div className={styles.navbar}>
-                <div className={styles.logoWrapper}>
+                <div className={styles.logoWrapper} onClick={() => router.push('/mainpage')} style={{cursor: 'pointer'}}>
                     <Image
                         src="/unnamed-Photoroom.png"
                         alt="CommunicALL"
@@ -704,7 +834,7 @@ const RoomPage: React.FC = () => {
                                 color: "#ffffff",
                                 padding: "10px 24px",
                                 borderRadius: "8px",
-                                fontSize: "16px",
+                                fontSize: subtitleSize,
                                 fontWeight: 500,
                                 maxWidth: "80%",
                                 textAlign: "center",
@@ -719,7 +849,7 @@ const RoomPage: React.FC = () => {
                                 top: "16px",
                                 right: "16px",
                                 backgroundColor: "rgba(239, 68, 68, 0.85)",
-                                color: "#ffffff",
+                                color: "#000000",
                                 padding: "6px 14px",
                                 borderRadius: "8px",
                                 fontSize: "13px",
@@ -730,53 +860,130 @@ const RoomPage: React.FC = () => {
                         )}
                     </div>
 
-                    <div style={{padding: "12px 24px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center"}}>
-                        <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
-                            <Form form = {form} onFinish={(values) => {
-                                sendText(values.message);
-                                form.resetFields();
-                            }} layout="inline">
-                                <Form.Item name="message" style={{flex: 1, marginBottom: 0}} hidden={!chat}>
-                                    <Input placeholder="Press enter to submit" />
+                    <div style={{padding: "10px 24px", borderTop: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "#ffffff"}}>
+                        {/* Left: chat */}
+                        <Space size={"small"} align={"center"}>
+                        <div style={{display: "flex", alignItems: "center",gap:12, flex: 1}}>
+                            <Button size="large" onClick={loadChat} style={{borderRadius: 5, whiteSpace: "nowrap", backgroundColor:"#e0ccf5"}} icon={<CommentOutlined/>}>
+                            </Button>
+
+                            <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1}}>
+                                <Form.Item name="message" style={{flex: 1, width: "100%"}} hidden={!chat}>
+                                    <Input placeholder="Send a message…" style={{borderRadius: 8}}/>
                                 </Form.Item>
                             </Form>
-                            <Button type="default" onClick={loadChat}>show chat history</Button>
                         </div>
-                    <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
+                        </Space>
                         {ttsEnabledBool ? <Popover
                             trigger="click"
-                            title="Choose a Voice"
+                            title="Choose a Voice "
                             content={
                                 <Select
                                     style={{ width: 400 }}
                                     defaultValue={0}
                                     onChange={(index) => chooseVoice(index)}
-                            options={window.speechSynthesis.getVoices().map((voice, index) => ({
-                                label: voice.name,
-                                value: index
-                            }))}
-                        />
-                        }
+                                    options={window.speechSynthesis.getVoices().map((voice, index) => ({
+                                        label: voice.name,
+                                        value: index
+                                    }))}
+                                />
+                            }
                         >
-                        <Button  style={{margin:"5px 20px", justifyItems : "flex-end"}} icon={<SoundOutlined />} />
-                    </Popover> : null}
-                        <Button
-                            shape="circle"
-                            icon={isMuted ? <AudioMutedOutlined /> : <AudioOutlined />}
-                            onClick={toggleMute}
-                            style={{
-                                backgroundColor: isMuted ? "#ef4444" : "#6B21D6",
-                                color: "white",
-                                border: "none",
-                            }}
-                        />
+                            <Button  size={"large"} style={{justifyItems : "flex-end"}} icon={<SoundOutlined />} />
+                        </Popover> : null}
+
+                        {/* Center: mute + volume */}
+                        <Space size="middle" align="center">
+                        <div style={{display: "flex", alignItems: "center", gap: 16, background: "#FFFFFF", borderRadius: 20, padding: 7}}>
+                            <Button
+                                shape="circle"
+                                size="large"
+                                icon={isMuted ? <AudioMutedOutlined/> : <AudioOutlined/>}
+                                onClick={toggleMute}
+                                style={{backgroundColor: isMuted ? "#ef4444" : "#6B21D6", color: "white", border: "none", width: 44, height: 44}}
+                            />
+                            <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: 2}}>
+                                <div style={{display: "flex", alignItems: "center", gap: 6}}>
+                                    <span style={{fontSize: 16}}>{volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}</span>
+                                    <input
+                                        type="range"
+                                        min={0}
+                                        max={1}
+                                        step={0.05}
+                                        value={volume}
+                                        onChange={e => {
+                                            const v = parseFloat(e.target.value);
+                                            setVolume(v);
+                                            if (remoteRef.current) remoteRef.current.volume = v;
+                                            localStorage.setItem("callVolume", String(v));
+                                        }}
+                                        style={{width: 90, accentColor: "#6B21D6", cursor: "pointer"}}
+                                    />
+                                </div>
+                                <span style={{fontSize: 10, color: "#9ca3af"}}>{Math.round(volume * 100)}%</span>
+                            </div>
                     </div>
-                        <Drawer title = "Chat History" open={chatHistory} onClose={closeChat} placement={"left"} mask={false}>
-                            {messages.map((msg, index) => <div key={index}
-                                                               style={{padding: "8px 12px", marginBottom: "8px", backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: "8px", color : "white", justifyContent : msg.client ? "flex-start" : "flex-end"}}>
-                                {msg.timestamp + " : " + msg.message}</div>)}
-                        </Drawer>
-                </div>
+                        </Space>
+
+                        <Drawer title="Chat History" open={chatHistory} onClose={closeChat} placement="left" mask={false}>
+                            {messages.map((msg, index) => (
+                                <div key={index} style={{padding: "8px 12px", marginBottom: 8, backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: 8, color: "white"}}>
+                                    {msg.timestamp + ", " + (msg.client ? myUsername : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner")) + " : " + msg.message}
+                                </div>
+                            ))}</Drawer>
+                    <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
+                        <Space size={"small"} align={"center"}>
+                        {sttEnabledBool ? (
+                            <Space.Compact>
+                            <Popover
+                            trigger="click"
+                            title="Chosse recognized language"
+                            content={
+                                <Select
+                                    style={{ width: 400 }}
+                                    defaultValue={0}
+                                    onChange={(index) => chooseLang(index)}
+                                    options={langs.map((language, index) => ({
+                                        label: language[0],
+                                        value: index
+                                    }))}
+                                />
+                            }
+                        >
+                            <Button  style={{color:"black"}} title={lang} type={"default"}>{lang}</Button>
+                        </Popover>
+                        <Popover
+                            placement={"top"}
+                            trigger = "click"
+                            title = "Select Accent"
+                            content = {
+                                <Select
+                                    style={{ width: 400 }}
+                                    defaultValue={0}
+                                    onChange={(index) => chooseAccent(index)}
+                                    options={accent.map((accents, index) => ({
+                                        label: accents,
+                                        value: index
+                                    }))}
+                                />
+                            }
+                        >
+                            <Button  style={{color:"white", backgroundColor : "#ff71fb"}} title={currentAccent} type={"default"}>{currentAccent
+                            }</Button>
+                        </Popover>
+                            </Space.Compact>) : null}
+                        </Space>
+                        <Space size="small" align="center">
+                            <Modal title={"Settings"} onCancel={() => closeSettings()} open={showSettingsModal} okText={"Apply"} onOk={() => closeSettings()}>
+                                <h4>Subtitle Size</h4>
+                                <p style={{fontSize : subtitleSize, alignContent:"center"}}>Example Text</p>
+                                <Slider style={{width: "50%"}} defaultValue={16} min={8} max={40} onChange={(value) => setSubtitleSize(value.toString()+"px")}></Slider>
+                            </Modal>
+                            <Button icon={<SettingOutlined/>} onClick={() => showSettings()}></Button>
+                        </Space>
+                    </div>
+
+                    </div>
                 </div>
                 <div style={{flex: 1, padding: "24px", display: "flex", flexDirection: "column"}}>
                     <div style={{
@@ -814,12 +1021,12 @@ const RoomPage: React.FC = () => {
                                     wsRef.current.send(JSON.stringify({ type: "markdown-update", content: newText }));
                                 }
                             }}
-                            height={600}
+                            height={400}
                             textareaProps={{
                                 placeholder: "# Shared notes\n\nHere you can collaboratively edit notes..."
                             }}
                         />) : (
-                            <MDEditor hideToolbar={true} value = {markdownText} preview={"preview"} height={600}/>
+                            <MDEditor hideToolbar={true} value = {markdownText} preview={"preview"} height={400}/>
                             )
                         }
                     </div>
@@ -827,6 +1034,18 @@ const RoomPage: React.FC = () => {
 
             </div>
         </div>
+        <Modal
+            title="Download your files"
+            open={showDownloadModal}
+            onOk={handleDownload}
+            onCancel={() => { setShowDownloadModal(false); router.push("/mainpage"); }}
+            okText="Download ZIP"
+            cancelText="Skip"
+            okButtonProps={{icon: <DownloadOutlined/>}}
+        >
+            <p>Download your transcript and notes as a ZIP?</p>
+        </Modal>
+        </>
     );
 };
 

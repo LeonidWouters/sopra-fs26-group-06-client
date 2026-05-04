@@ -1,5 +1,5 @@
 "use client";
-import {Button, Card, Tag} from "antd";
+import {Button, Card, Tag, Badge, Tooltip, Modal} from "antd";
 import React, {useEffect, useState} from "react";
 import {useParams, useRouter} from "next/navigation";
 import {useApi} from "@/hooks/useApi";
@@ -7,8 +7,9 @@ import {User} from "@/types/user";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import {useAuth} from "@/hooks/useAuth";
 import mainStyles from "@/styles/mainpage.module.css";
-import {LogoutOutlined} from "@ant-design/icons";
+import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined, UserDeleteOutlined} from "@ant-design/icons";
 import Image from "next/image";
+import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 
 const FriendsPage: React.FC = () => {
     const router = useRouter();
@@ -20,6 +21,7 @@ const FriendsPage: React.FC = () => {
     const isOwnProfile = String(loggedInId) === String(id);
     const [friends, setFriends] = useState<User[]>([]);
     const [pendingRequests, setPendingRequests] = useState<User[]>([]);
+    const [me, setMe] = useState<User | null>(null);
 
     useEffect(() => {
         if (!isReady) return;
@@ -34,14 +36,24 @@ const FriendsPage: React.FC = () => {
                 const r: User[] = await apiService.get(`/users/${id}/friend-requests`, token);
                 setPendingRequests(r);
             }
+            const fetchedMe: User = await apiService.get(`/users/${loggedInId}`, token);
+            setMe(fetchedMe);
         };
         load();
+        const interval = setInterval(load, 3000);
+        return () => clearInterval(interval);
     }, [apiService, isReady, token, id, router, isOwnProfile]);
 
     const handleAccept = async (senderId: string) => {
         await apiService.put(`/users/${id}/friend-request/accept`, {senderId: Number(senderId)}, token);
         const r: User[] = await apiService.get(`/users/${id}/friend-requests`, token);
         setPendingRequests(r);
+        const f: User[] = await apiService.get(`/users/${id}/friends`, token);
+        setFriends(f);
+    };
+
+    const handleRemoveFriend = async (friendId: string) => {
+        await apiService.delete(`/users/${id}/friends/${friendId}`, token);
         const f: User[] = await apiService.get(`/users/${id}/friends`, token);
         setFriends(f);
     };
@@ -55,63 +67,148 @@ const FriendsPage: React.FC = () => {
     if (!isReady) return <div>Loading...</div>;
 
     return (
-        //copied from mainpage (headerbar)
-        <div className={mainStyles.container}>
-            <div className={mainStyles.navbar}>
-                <div className={mainStyles.logoWrapper}>
-                    <Image src="/unnamed-Photoroom.png" alt="CommunicALL" width={200} height={55}
-                           style={{width: "auto", maxWidth: "200px", height: "100%", maxHeight: "55px"}}
-                           onClick={() => router.push("/mainpage")}/>
+        <div className={mainStyles.appShell}>
+            <aside className={mainStyles.sidebar}>
+                <div className={mainStyles.sidebarTop}>
+                    <div className={mainStyles.sbLogo} onClick={() => router.push('/mainpage')} style={{cursor: 'pointer'}}>
+                        <Image src="/banner_logo.png" alt="Logo" width={32} height={32}
+                               style={{width: 32, height: 32, objectFit: 'contain'}}/>
+                    </div>
+                    <Tooltip title="Rooms" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => router.push("/mainpage")}>
+                            <AppstoreOutlined/>
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Friends" placement="right">
+                        <Badge count={me?.pendingFriendRequests?.length ?? 0} size="small" offset={[-4, 4]}>
+                            <div className={`${mainStyles.sbIcon} ${mainStyles.sbIconActive}`}>
+                                <TeamOutlined/>
+                            </div>
+                        </Badge>
+                    </Tooltip>
+                    <Tooltip title="Transcripts" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => router.push(`/users/${loggedInId}/transcripts`)}>
+                            <FileTextOutlined/>
+                        </div>
+                    </Tooltip>
                 </div>
-                <div className={mainStyles.navButtons}>
-                    <Button color="default" variant="text" onClick={() => router.push(`/users/${id}`)}>← Back</Button>
-                    <Button color="danger" variant="text" icon={<LogoutOutlined/>} onClick={() => {
-                        apiService.put("/users/logout", null, token);
-                        clearToken();
-                        clearId();
-                        router.push("/");
-                    }}>Sign Out</Button>
+                <div className={mainStyles.sidebarBottom}>
+                    <Tooltip title="Sign Out" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => {
+                            apiService.put("/users/logout", null, token);
+                            clearToken();
+                            clearId();
+                            router.push("/");
+                        }}>
+                            <LogoutOutlined/>
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="My Profile" placement="right">
+                        <div
+                            className={mainStyles.sbAvatar}
+                            style={me?.profilePicture ? {} : {backgroundColor: getAvatarColor(me?.username ?? "")}}
+                            onClick={() => router.push(`/users/${loggedInId}`)}
+                            >
+                            {me?.profilePicture
+                                ? <img src={me.profilePicture} style={{width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover"}} />
+                                : getAvatarInitials(me?.username ?? "")
+                            }
                 </div>
-            </div>
-            <div className={mainStyles.mainContent}>
+                    </Tooltip>
+                </div>
+            </aside>
+            <div className={mainStyles.container}>
+                <Button icon={<ArrowLeftOutlined/>} type="text"
+                        onClick={() => router.push(`/mainpage`)} style={{marginBottom: 16}}>
+                    Back
+                </Button>
+                <div className={mainStyles.mainContent}>
                 <div className={mainStyles.userOverview}>
                     <div style={{fontSize: 24, fontWeight: 600, marginBottom: 16}}>Friends ({friends.length})</div>
                     <div className={mainStyles.userGrid}>
-                        {friends.length === 0 ? <p>No friends yet.</p> : friends.map((friend) => (
+                        {friends.length === 0 ? (
+                            <div style={{
+                                gridColumn: "1 / -1",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                padding: "64px 24px",
+                                background: "#F5EFFD",
+                                borderRadius: 14,
+                                border: "1px solid #E0CCF5",
+                                textAlign: "center",
+                            }}>
+                                <TeamOutlined style={{fontSize: 52, color: "#c4b5fd", marginBottom: 16}}/>
+                                <div style={{fontSize: 18, fontWeight: 600, color: "#374151", marginBottom: 8}}>No friends yet</div>
+                                <div style={{fontSize: 14, color: "#9ca3af"}}>Browse users on the main page and send a friend request.</div>
+                            </div>
+                        ) : friends.map((friend) => (
                             <Card key={friend.id} className={mainStyles.card}
                                   onClick={() => router.push(`/users/${friend.id}`)}
                                   title={
-                                      <div style={{
-                                          display: "flex",
-                                          flexDirection: "column",
-                                          lineHeight: "1.2",
-                                          padding: "4px 0"
-                                      }}>
-                                          <span style={{
-                                              fontSize: 16,
-                                              fontWeight: 600,
-                                              color: "#ffffff"
-                                          }}>{friend.name}</span>
-                                          <span style={{
-                                              fontSize: 12,
-                                              color: "#a0a0b8",
-                                              fontWeight: "normal",
-                                              marginTop: 1
-                                          }}>@{friend.username}</span>
+                                      <div style={{display: "flex", alignItems: "center", gap: 10, padding: "4px 0"}}>
+                                          {/* Profilbild Logik */}
+                                          <div style={{
+                                              width: 36, height: 36, borderRadius: "50%",
+                                              backgroundColor: friend?.profilePicture ? "transparent" : getAvatarColor(friend?.username ?? ""),
+                                              display: "flex", alignItems: "center", justifyContent: "center",
+                                              fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0,
+                                              overflow: "hidden"
+                                          }}>
+                                              {friend?.profilePicture ? (
+                                                  <img src={friend.profilePicture} style={{width: "100%", height: "100%", objectFit: "cover"}} alt="Avatar" />
+                                              ) : (
+                                                  getAvatarInitials(friend?.username ?? "")
+                                              )}
+                                          </div>
+                                          
+                                          {/* Text Logik aus dem dev Branch */}
+                                          <div style={{
+                                              display: "flex",
+                                              flexDirection: "column",
+                                              lineHeight: "1.2"
+                                          }}>
+                                              <span style={{
+                                                  fontSize: 16,
+                                                  fontWeight: 600,
+                                                  color: "#1a1a2e"
+                                              }}>{friend.name}</span>
+                                              <span style={{
+                                                  fontSize: 12,
+                                                  color: "#6b21d6",
+                                                  fontWeight: "normal",
+                                                  marginTop: 1
+                                              }}>@{friend.username}</span>
+                                          </div>
                                       </div>
                                   }
-                                  extra={<Tag
-                                      color={friend.status === "ONLINE" ? "green" : "red"}>{friend.status}</Tag>}
+                                  extra={
+                                      <div style={{display: "flex", gap: 8, alignItems: "center"}}>
+                                          <Tag color={friend.status === "ONLINE" ? "green" : "red"}>{friend.status}</Tag>
+                                          <Button size="small" danger icon={<UserDeleteOutlined/>}
+                                              onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  Modal.confirm({
+                                                      title: "Remove friend?",
+                                                      content: `Remove ${friend.name ?? friend.username} from your friends?`,
+                                                      okText: "Remove",
+                                                      okButtonProps: { danger: true },
+                                                      onOk: () => handleRemoveFriend(String(friend.id)),
+                                                  });
+                                              }}
+                                          />
+                                      </div>
+                                  }
                                   variant="borderless"
                                   styles={{
                                       header: {
-                                          backgroundColor: "rgba(44, 44, 84, 0.95)",
-                                          borderBottom: "1px solid rgba(255,255,255,0.1)"
+                                          backgroundColor: "rgba(245, 239, 253, 0.95)",
+                                          borderBottom: "1px solid #E0CCF5"
                                       },
-                                      body: {backgroundColor: "rgba(64, 64, 122, 0.85)", cursor: "pointer"}
+                                      body: {backgroundColor: "rgba(245, 239, 253, 0.85)", cursor: "pointer"}
                                   }}
                             >
-                                <p style={{color: "#e2e8f0", margin: 0}}>{friend.bio}</p>
+                                <p style={{color: "#4a5565", margin: 0}}>{friend.bio}</p>
                             </Card>
                         ))}
                     </div>
@@ -143,6 +240,7 @@ const FriendsPage: React.FC = () => {
                 )}
 
             </div>
+        </div>
         </div>
     );
 };
