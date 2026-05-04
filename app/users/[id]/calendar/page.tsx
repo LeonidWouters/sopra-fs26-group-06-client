@@ -9,7 +9,7 @@ import {
 } from "@ant-design/icons";
 import Image from "next/image";
 import dayjs from "dayjs";
-import "calendarkit-basic/dist/styles.css";
+import "react-big-calendar/lib/css/react-big-calendar.css";
 import mainStyles from "@/styles/mainpage.module.css";
 import styles from "./calendar.module.css";
 import { useApi } from "@/hooks/useApi";
@@ -17,10 +17,26 @@ import { useAuth } from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import { getAvatarColor, getAvatarInitials } from "@/utils/avatarColor";
 import { User } from "@/types/user";
-import type { CalendarEvent, ViewType } from "calendarkit-basic";
 
-const BasicScheduler = dynamic(
-    () => import("calendarkit-basic").then(m => m.BasicScheduler),
+import type { Event as RBCEvent } from "react-big-calendar";
+
+export interface CalendarEvent extends RBCEvent {
+    id: string;
+    title: string;
+    description?: string;
+    start: Date;
+    end: Date;
+    color?: string;
+}
+
+const BigCalendar = dynamic(
+    () => import("react-big-calendar").then((mod) => {
+        const { Calendar, dayjsLocalizer } = mod;
+        const localizer = dayjsLocalizer(dayjs);
+        return function CalendarWrapper(props: Omit<React.ComponentProps<typeof Calendar>, "localizer">) {
+            return <Calendar localizer={localizer} {...props} />;
+        };
+    }),
     {
         ssr: false,
         loading: () => (
@@ -70,6 +86,7 @@ const EventModal: React.FC<EventModalProps> = ({
                 end: values.end.toDate(),
                 color: "#6B21D6",
             });
+            onClose();
         });
     };
 
@@ -80,7 +97,7 @@ const EventModal: React.FC<EventModalProps> = ({
             onCancel={onClose}
             footer={[
                 existingEvent && onDelete ? (
-                    <Button key="del" danger onClick={() => { onDelete(existingEvent.id); onClose(); }}>
+                    <Button key="del" danger onClick={() => { onDelete!(existingEvent.id); onClose(); }}>
                         Delete
                     </Button>
                 ) : null,
@@ -122,8 +139,6 @@ const CalendarPage: React.FC = () => {
 
     const [me, setMe] = useState<User | null>(null);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
-    const [view, setView] = useState<ViewType>("week");
-    const [currentDate, setCurrentDate] = useState(new Date());
     const [modalOpen, setModalOpen] = useState(false);
     const [modalEvent, setModalEvent] = useState<CalendarEvent | null>(null);
     const [modalInitialDate, setModalInitialDate] = useState<Date | undefined>(undefined);
@@ -143,11 +158,8 @@ const CalendarPage: React.FC = () => {
     const handleSave = (event: CalendarEvent) => {
         setEvents(prev => {
             const exists = prev.some(e => e.id === event.id);
-            return exists
-                ? prev.map(e => e.id === event.id ? event : e)
-                : [...prev, event];
+            return exists ? prev.map(e => e.id === event.id ? event : e) : [...prev, event];
         });
-        setModalOpen(false);
     };
 
     const handleDelete = (id: string) => {
@@ -242,33 +254,21 @@ const CalendarPage: React.FC = () => {
                             Schedule Call
                         </Button>
                     </div>
-                    <div className={styles.schedulerWrapper}>
-                        <BasicScheduler
+                    <div className={styles.calendarWrapper}>
+                        <BigCalendar
                             events={events}
-                            view={view}
-                            date={currentDate}
-                            onViewChange={setView}
-                            onDateChange={setCurrentDate}
-                            onEventClick={openEdit}
-                            onEventDelete={handleDelete}
-                            weekStartsOn={1}
-                            theme={{
-                                colors: {
-                                    primary: "#6B21D6",
-                                    accent: "#E0CCF5",
-                                    background: "#F5EFFD",
-                                },
-                            }}
-                            renderEventForm={({ isOpen, onClose, event, initialDate }) => (
-                                <EventModal
-                                    open={isOpen}
-                                    onClose={onClose}
-                                    existingEvent={event ?? null}
-                                    initialDate={initialDate}
-                                    onSave={(saved) => { handleSave(saved); onClose(); }}
-                                    onDelete={(id) => { handleDelete(id); onClose(); }}
-                                />
-                            )}
+                            defaultView="week"
+                            views={["month", "week", "day", "agenda"]}
+                            step={30}
+                            timeslots={2}
+                            startAccessor={(e) => (e as CalendarEvent).start}
+                            endAccessor={(e) => (e as CalendarEvent).end}
+                            titleAccessor={(e) => (e as CalendarEvent).title}
+                            style={{ height: "100%" }}
+                            onSelectEvent={(e) => openEdit(e as CalendarEvent)}
+                            onSelectSlot={(slot: { start: Date }) => openCreate(slot.start)}
+                            selectable
+                            popup
                         />
                     </div>
                 </div>
