@@ -12,12 +12,131 @@
     margin: 0;
 }
 
-.schedulerWrapper {
+.calendarWrapper {
     background: #F5EFFD;
     border: 1px solid #E0CCF5;
     border-radius: 14px;
-    padding: 16px;
+    padding: 16px 20px;
     box-shadow: 0 4px 24px rgba(107, 33, 214, 0.08);
-    min-height: 640px;
+    height: 680px;
     overflow: hidden;
+}
+
+/* Override react-big-calendar styles to match lavender theme */
+.calendarWrapper :global(.rbc-calendar) {
+    height: 100%;
+    font-family: inherit;
+    color: #111827;
+}
+
+.calendarWrapper :global(.rbc-toolbar) {
+    margin-bottom: 16px;
+}
+
+.calendarWrapper :global(.rbc-toolbar button) {
+    color: #6d28d9;
+    border: 1px solid #E0CCF5;
+    border-radius: 8px;
+    padding: 6px 14px;
+    background: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.calendarWrapper :global(.rbc-toolbar button:hover) {
+    background: #ede9fe;
+    border-color: #c4b5fd;
+}
+
+.calendarWrapper :global(.rbc-toolbar button.rbc-active) {
+    background: linear-gradient(90deg, #4f46e5, #7c3aed);
+    color: #fff;
+    border-color: transparent;
+}
+
+.calendarWrapper :global(.rbc-toolbar button.rbc-active:hover) {
+    background: linear-gradient(90deg, #4338ca, #6d28d9);
+}
+
+.calendarWrapper :global(.rbc-toolbar-label) {
+    font-size: 17px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.calendarWrapper :global(.rbc-header) {
+    background: #ede9fe;
+    color: #4f46e5;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 4px;
+    border-bottom: 1px solid #E0CCF5;
+}
+
+.calendarWrapper :global(.rbc-today) {
+    background: rgba(107, 33, 214, 0.06);
+}
+
+.calendarWrapper :global(.rbc-event) {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    padding: 2px 6px;
+    color: #fff;
+}
+
+.calendarWrapper :global(.rbc-event:focus),
+.calendarWrapper :global(.rbc-event:hover) {
+    background: linear-gradient(135deg, #4338ca, #6d28d9);
+}
+
+.calendarWrapper :global(.rbc-event.rbc-selected) {
+    background: linear-gradient(135deg, #4338ca, #6d28d9);
+}
+
+.calendarWrapper :global(.rbc-slot-selection) {
+    background: rgba(107, 33, 214, 0.15);
+}
+
+.calendarWrapper :global(.rbc-time-slot) {
+    font-size: 11px;
+    color: #9ca3af;
+}
+
+.calendarWrapper :global(.rbc-current-time-indicator) {
+    background: #7c3aed;
+}
+
+.calendarWrapper :global(.rbc-off-range-bg) {
+    background: rgba(224, 204, 245, 0.2);
+}
+
+.calendarWrapper :global(.rbc-day-bg + .rbc-day-bg),
+.calendarWrapper :global(.rbc-header + .rbc-header) {
+    border-left: 1px solid #E0CCF5;
+}
+
+.calendarWrapper :global(.rbc-month-row + .rbc-month-row),
+.calendarWrapper :global(.rbc-timeslot-group) {
+    border-top: 1px solid #E0CCF5;
+}
+
+.calendarWrapper :global(.rbc-time-content),
+.calendarWrapper :global(.rbc-time-header) {
+    border-color: #E0CCF5;
+}
+
+.calendarWrapper :global(.rbc-time-view),
+.calendarWrapper :global(.rbc-month-view),
+.calendarWrapper :global(.rbc-agenda-view) {
+    border: 1px solid #E0CCF5;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.calendarWrapper :global(.rbc-show-more) {
+    color: #6d28d9;
+    font-size: 12px;
 }
