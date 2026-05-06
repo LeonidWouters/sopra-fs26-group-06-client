@@ -108,6 +108,7 @@ const RoomPage: React.FC = () => {
     const [showDownloadModal, setShowDownloadModal] = useState<boolean>(false);
     const [showSettingsModal, setSettingsModal] = useState<boolean>(false);
     const downloadDataRef = useRef<{transcript: string; notes: string}>({transcript: "", notes: ""});
+    const isLeavingRef = useRef(false);
     const [lang,setLang] = useState<string>("English");
     const [accent,setAccent] = useState<string[]>(langs[6][1]);
     const [currentAccent,setCurrentAccent] = useState<string>(accent[0]);
@@ -122,6 +123,9 @@ const RoomPage: React.FC = () => {
     }
 
     const leaveRoom = async (): Promise<void> => {
+        if (isLeavingRef.current) return;
+        isLeavingRef.current = true;
+        setCallStarted(false);
         peerConnectionRef.current?.close();
         peerConnectionRef.current = null;
         speechRef.current?.stop();
