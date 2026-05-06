@@ -300,6 +300,19 @@ const RoomPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [incomingOffer, isMediaReady]);
 
+    function sendHeartbeat(token: string) {
+        apiService.put(`/rooms/${id}/heartbeat`, null, token);
+    }
+
+    useEffect(() =>{
+        if(!callStarted) return;
+        sendHeartbeat(token);
+        const interval = setInterval(() => {
+            sendHeartbeat(token);
+        },30000)
+        return () => clearInterval(interval);
+    }, [callStarted]);
+
     useEffect(() => {
         if (!isReady) return;
         const baseDomain = getApiDomain().replace(/^http/, "ws").replace(/\/$/, "");
@@ -573,7 +586,6 @@ const RoomPage: React.FC = () => {
 
     function startTTT() {
         setChat(true);//turns on chat feature so it is visible
-
     }
 
     function startSTT() {
