@@ -16,6 +16,7 @@ import {
 } from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
 import JSZip from "jszip";
+import { marked } from "marked";
 
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), {ssr: false});
@@ -170,7 +171,35 @@ const RoomPage: React.FC = () => {
         const date = new Date().toISOString().slice(0, 10);
         const zip = new JSZip();
         zip.file(`transcript_${date}.txt`, downloadDataRef.current.transcript);
-        zip.file(`notes_${date}.md`, downloadDataRef.current.notes);
+
+        const rendered = marked.parse(downloadDataRef.current.notes, { gfm: true, breaks: false }) as string;
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Notes — ${date}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 800px; margin: 40px auto; padding: 24px; line-height: 1.7; color: #1a1a1a; }
+  h1, h2, h3 { color: #6B21D6; }
+  h1 { margin-top: 0; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
+  pre { background: #f4f4f5; padding: 12px 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
+  code { background: #f4f4f5; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.9em; }
+  pre code { background: transparent; padding: 0; }
+  table { border-collapse: collapse; margin: 12px 0; }
+  th, td { border: 1px solid #d1d5db; padding: 8px 12px; }
+  th { background: #f4f4f5; font-weight: 600; }
+  blockquote { border-left: 4px solid #c4b5fd; margin: 12px 0; padding: 4px 16px; color: #4b5563; }
+</style>
+</head>
+<body>
+<h1>Notes — ${date}</h1>
+<hr>
+${rendered}
+</body>
+</html>`;
+        zip.file(`notes_${date}.html`, html);
+
         const zipBlob = await zip.generateAsync({type: "blob"});
         const downloadUrl = URL.createObjectURL(zipBlob);
         const downloadLink = document.createElement("a");
