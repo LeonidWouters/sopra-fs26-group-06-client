@@ -1,8 +1,8 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, {use, useEffect, useState} from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { Button, Modal, Form, Input, DatePicker, Badge, Tooltip, Spin } from "antd";
+import {Button, Modal, Form, Input, DatePicker, Badge, Tooltip, Spin, Select} from "antd";
 import {
     LogoutOutlined, AppstoreOutlined, TeamOutlined,
     FileTextOutlined, CalendarOutlined, PlusOutlined,
@@ -32,10 +32,10 @@ export interface CalendarEvent extends RBCEvent {
 }
 
 const BigCalendar = dynamic(
-    () => (Promise.all[
+    () => Promise.all([
         import("react-big-calendar"),
-        import("dayjs")
-        ]).then((mod, { default: dayjs }) => {
+        import("dayjs"),
+        ]).then(([mod, { default: dayjs }]) => {
         const { Calendar, dayjsLocalizer } = mod;
         const localizer = dayjsLocalizer(dayjs);
         return function CalendarWrapper(props: Omit<React.ComponentProps<typeof Calendar>, "localizer">) {
@@ -64,12 +64,30 @@ interface EventModalProps {
 const EventModal: React.FC<EventModalProps> = ({
     open, onClose, existingEvent, initialDate, onSave, onDelete,
 }) => {
+    const [friends, setFriends] = useState<User[]>([]);//get friends for invite dropdown
+    const [invitedUserId,setInvitedUserId] = useState<number>(0)
     const [form] = Form.useForm();
+    const apiService = useApi();
+    const {
+        value :id,
+    } = useLocalStorage<string>("id", "");
+    const {
+        value: token,
+    } = useLocalStorage<string>("token", "");
+
+    useEffect(() => {
+        if(!id || !token) return;
+        const loadFriends = async() =>{
+            const friends = await apiService.get<User[]>(`/users/${id}/friends`, token);//fetch all current friends to display in dropdown for meeting
+            setFriends(friends);
+        }
+        loadFriends();
+    }, [apiService, id,token]);
 
     useEffect(() => {
         if (open) {
-            const start = existingEvent?.startDate ?? initialDate ?? new Date();
-            const end = existingEvent?.endDate ?? new Date(new Date(start).getTime() + 60 * 60 * 1000);
+            const startDate = existingEvent?.startDate ?? initialDate ?? new Date();
+            const endDate = existingEvent?.endDate ?? new Date(new Date(startDate).getTime() + 60 * 60 * 1000);
             form.setFieldsValue({
                 title: existingEvent?.title ?? "",
                 description: existingEvent?.description ?? "",
@@ -84,14 +102,14 @@ const EventModal: React.FC<EventModalProps> = ({
     const handleSave = () => {
         form.validateFields().then(values => {
             onSave({
-                id: existingEvent?.id ?? 0,//Id is set in backend and only fetched via GET
+                id: existingEvent?.id ?? "",//Id is set in backend and only fetched via GET
                 title: values.title,
                 description: values.description ?? "",
                 startDate: values.startDate.toDate(),
                 endDate: values.endDate.toDate(),
                 color: "#6B21D6",
-                owner : 1,
-                invitedUser : 1,
+                owner : parseInt(id) ,
+                invitedUser : values.invitedUserId,
             });
             onClose();
         });
@@ -130,6 +148,20 @@ const EventModal: React.FC<EventModalProps> = ({
                 <Form.Item label="EndDate" name="endDate"
                     rules={[{ required: true, message: "Please pick an end time" }]}>
                     <DatePicker showTime={{ minuteStep: 15 }} format="DD MMM YYYY HH:mm" style={{ width: "100%" }} />
+                </Form.Item>
+                <Form.Item label="Invite Friend" name="invitedUserId" rules={[{ required: true, message: "Please pick a user to invite" }]}>
+                    <Select
+                        placeholder="Select a friend to invite"
+                        value={invitedUserId}
+                        onChange={value => setInvitedUserId(value)}
+                        style={{width: "100%"}}
+                    >
+                        {friends.map(friend => (
+                            <Select.Option key={friend.id} value={friend.username}>
+                                {friend.name} (@{friend.username})
+                            </Select.Option>
+                        ))}
+                    </Select>
                 </Form.Item>
             </Form>
         </Modal>
