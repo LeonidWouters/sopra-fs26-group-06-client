@@ -24,13 +24,18 @@ export interface CalendarEvent extends RBCEvent {
     id: string;
     title: string;
     description?: string;
-    start: Date;
-    end: Date;
+    startDate: Date;
+    endDate: Date;
     color?: string;
+    owner : number;
+    invitedUser : number;
 }
 
 const BigCalendar = dynamic(
-    () => import("react-big-calendar").then((mod) => {
+    () => (Promise.all[
+        import("react-big-calendar"),
+        import("dayjs")
+        ]).then((mod, { default: dayjs }) => {
         const { Calendar, dayjsLocalizer } = mod;
         const localizer = dayjsLocalizer(dayjs);
         return function CalendarWrapper(props: Omit<React.ComponentProps<typeof Calendar>, "localizer">) {
@@ -63,13 +68,13 @@ const EventModal: React.FC<EventModalProps> = ({
 
     useEffect(() => {
         if (open) {
-            const start = existingEvent?.start ?? initialDate ?? new Date();
-            const end = existingEvent?.end ?? new Date(new Date(start).getTime() + 60 * 60 * 1000);
+            const start = existingEvent?.startDate ?? initialDate ?? new Date();
+            const end = existingEvent?.endDate ?? new Date(new Date(start).getTime() + 60 * 60 * 1000);
             form.setFieldsValue({
                 title: existingEvent?.title ?? "",
                 description: existingEvent?.description ?? "",
-                start: dayjs(start),
-                end: dayjs(end),
+                startDate: dayjs(startDate),
+                endDate: dayjs(endDate),
             });
         } else {
             form.resetFields();
@@ -79,12 +84,14 @@ const EventModal: React.FC<EventModalProps> = ({
     const handleSave = () => {
         form.validateFields().then(values => {
             onSave({
-                id: existingEvent?.id ?? crypto.randomUUID(),
+                id: existingEvent?.id ?? 0,//Id is set in backend and only fetched via GET
                 title: values.title,
                 description: values.description ?? "",
-                start: values.start.toDate(),
-                end: values.end.toDate(),
+                startDate: values.startDate.toDate(),
+                endDate: values.endDate.toDate(),
                 color: "#6B21D6",
+                owner : 1,
+                invitedUser : 1,
             });
             onClose();
         });
@@ -116,11 +123,11 @@ const EventModal: React.FC<EventModalProps> = ({
                 <Form.Item label="Description" name="description">
                     <Input.TextArea rows={2} placeholder="Optional notes..." />
                 </Form.Item>
-                <Form.Item label="Start" name="start"
+                <Form.Item label="StartDate" name="startDate"
                     rules={[{ required: true, message: "Please pick a start time" }]}>
                     <DatePicker showTime={{ minuteStep: 15 }} format="DD MMM YYYY HH:mm" style={{ width: "100%" }} />
                 </Form.Item>
-                <Form.Item label="End" name="end"
+                <Form.Item label="EndDate" name="endDate"
                     rules={[{ required: true, message: "Please pick an end time" }]}>
                     <DatePicker showTime={{ minuteStep: 15 }} format="DD MMM YYYY HH:mm" style={{ width: "100%" }} />
                 </Form.Item>
@@ -261,8 +268,8 @@ const CalendarPage: React.FC = () => {
                             views={["month", "week", "day", "agenda"]}
                             step={30}
                             timeslots={2}
-                            startAccessor={(e) => (e as CalendarEvent).start}
-                            endAccessor={(e) => (e as CalendarEvent).end}
+                            startAccessor={(e) => (e as CalendarEvent).startDate}
+                            endAccessor={(e) => (e as CalendarEvent).endDate}
                             titleAccessor={(e) => (e as CalendarEvent).title}
                             style={{ height: "100%" }}
                             onSelectEvent={(e) => openEdit(e as CalendarEvent)}

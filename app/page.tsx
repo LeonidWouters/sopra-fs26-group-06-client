@@ -21,21 +21,38 @@ const Login: React.FC = () => {
     const router = useRouter();
     const apiService = useApi();
     const [form] = Form.useForm();
-    // useLocalStorage hook example use
-    // The hook returns an object with the value and two functions
-    // Simply choose what you need from the hook:
-    const {set: setId} = useLocalStorage<string>("id", "");
-    const [authMode, setAuthMode] = useState<"login" | "register">("login");
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (token) router.push("/mainpage");
-    }, []);
     const {
-        // value: token, // is commented out because we do not need the token value
+        value :id,
+        set: setId,
+        clear: clearId
+    } = useLocalStorage<string>("id", "");
+
+    const [authMode, setAuthMode] = useState<"login" | "register">("login");
+    const {
+        value:token,
         set: setToken, // we need this method to set the value of the token to the one we receive from the POST request to the backend server API
-        // clear: clearToken, // is commented out because we do not need to clear the token when logging in
+        clear: clearToken,
     } = useLocalStorage<string>("token", ""); // note that the key we are selecting is "token" and the default value we are setting is an empty string
     // if you want to pick a different token, i.e "usertoken", the line above would look as follows: } = useLocalStorage<string>("usertoken", "");
+
+    useEffect(() => {
+        if (!token || !id) return
+        const verify = async() => {
+            try {
+                const bool =  await apiService.get<boolean>(`/users/${id}/verifier`, token);//now truly checks if user actually has a valid token
+                if(bool) {
+                    router.push(`/mainpage`);
+                }
+            }
+            catch(error)//clean local storage if invalid id or token is stored
+            {
+                console.log(error);
+                clearToken(); //clears stale tokens
+                clearId(); //clears old id
+            }
+        }
+        verify()
+    }, [apiService, router]);
 
     const handleLogin = async (values: FormFieldProps) => {
         try {
