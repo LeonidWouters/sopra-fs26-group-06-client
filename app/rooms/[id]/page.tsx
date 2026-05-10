@@ -12,7 +12,7 @@ import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
 import {
     AudioMutedOutlined, AudioOutlined, CloseCircleOutlined, CommentOutlined, DownloadOutlined,
-    SettingOutlined, SoundOutlined
+    PaperClipOutlined, SettingOutlined, SoundOutlined
 } from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
 import JSZip from "jszip";
@@ -113,6 +113,7 @@ const RoomPage: React.FC = () => {
     const [accent,setAccent] = useState<string[]>(langs[6][1]);
     const [currentAccent,setCurrentAccent] = useState<string>(accent[0]);
     const langRef = useRef<string>(accent[0])
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
 
 
@@ -120,6 +121,9 @@ const RoomPage: React.FC = () => {
         message: string;
         client: boolean; //handle local vs remote messages
         timestamp: string;
+        isFile?: boolean;
+        fileData?: string;
+        fileName?: string;
     }
 
     const leaveRoom = async (): Promise<void> => {
@@ -173,10 +177,7 @@ const RoomPage: React.FC = () => {
         zip.file(`notes_${date}.md`, downloadDataRef.current.notes);
         const zipBlob = await zip.generateAsync({type: "blob"});
         const downloadUrl = URL.createObjectURL(zipBlob);
-        const downloadLink = document.createElement("a");
-        downloadLink.href = downloadUrl;
-        downloadLink.download = `CommunicALL_${date}.zip`;
-        downloadLink.click();
+        handleFileDownload(downloadUrl, `CommunicALL_${date}.zip`);
         URL.revokeObjectURL(downloadUrl);
         setShowDownloadModal(false);
         router.push("/mainpage");
@@ -354,6 +355,10 @@ const RoomPage: React.FC = () => {
                 }
             }
 
+            if (message.type === "file-share") {
+                setMessages((messages) => [...messages, message.content]);
+            }
+
             if (message.type === "speech-to-text") {
                 setSubtitleText(message.content);
             }
@@ -405,6 +410,42 @@ const RoomPage: React.FC = () => {
         setChatHistory(false);
     }
 
+    const handleFileDownload = (fileData: string, fileName: string) => {
+        const downloadlink = document.createElement("a");
+        downloadlink.href = fileData;
+        downloadlink.download = fileName;
+        downloadlink.click();
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const fileReader = new FileReader();
+        fileReader.onload = () => {
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const localMessage: textMsg = {
+                message: file.name,
+                client: true,
+                timestamp,
+                isFile: true,
+                fileData: fileReader.result as string,
+                fileName: file.name};
+
+            const remoteMessage: textMsg = {
+                message: file.name,
+                client: false,
+                timestamp,
+                isFile: true,
+                fileData: fileReader.result as string,
+                fileName: file.name
+            };
+            wsRef.current?.send(JSON.stringify({ type: "file-share", content: remoteMessage }));
+            setMessages((messages) => [...messages, localMessage]);};
+
+        fileReader.readAsDataURL(file);
+        e.target.value = "";
+    };
 
     const setupPeerConnection = () => {
 
@@ -870,6 +911,8 @@ const RoomPage: React.FC = () => {
                         <div style={{display: "flex", alignItems: "center",gap:12, flex: 1}}>
                             <Button size="large" onClick={loadChat} style={{borderRadius: 5, whiteSpace: "nowrap", backgroundColor:"#e0ccf5"}} icon={<CommentOutlined/>}>
                             </Button>
+                            <input type="file" ref={fileInputRef} style={{display:"none"}} onChange={handleFileSelect}/>
+                            <Button size="large" title="Attach file" onClick={() => fileInputRef.current?.click()} style={{borderRadius: 5, backgroundColor:"#e0ccf5"}} icon={<PaperClipOutlined/>}/>
 
                             <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1}}>
                                 <Form.Item name="message" style={{flex: 1, width: "100%"}} hidden={!chat}>
@@ -932,7 +975,13 @@ const RoomPage: React.FC = () => {
                         <Drawer title="Chat History" open={chatHistory} onClose={closeChat} placement="left" mask={false}>
                             {messages.map((msg, index) => (
                                 <div key={index} style={{padding: "8px 12px", marginBottom: 8, backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: 8, color: "white"}}>
-                                    {msg.timestamp + ", " + (msg.client ? myUsername : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner")) + " : " + msg.message}
+                                    {msg.isFile ? (
+                                        <div style={{display:"flex", alignItems:"center", gap:8}}>
+                                            <PaperClipOutlined/>
+                                            <span>{msg.timestamp + ", " + (msg.client ? myUsername : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner")) + " shared: " + msg.fileName}</span>
+                                            <Button size="small" icon={<DownloadOutlined/>} onClick={() => handleFileDownload(msg.fileData!, msg.fileName!)}>Download</Button>
+                                        </div>
+                                    ) : msg.timestamp + ", " + (msg.client ? myUsername : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner")) + " : " + msg.message}
                                 </div>
                             ))}</Drawer>
                     <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
