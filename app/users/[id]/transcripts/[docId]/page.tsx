@@ -12,6 +12,8 @@ import useLocalStorage from "@/hooks/useLocalStorage";
 import { TranscriptGetDTO, NoteGetDTO } from "@/types/transcript";
 import { getAvatarColor, getAvatarInitials } from "@/utils/avatarColor";
 import { User } from "@/types/user";
+import remarkGfm from "remark-gfm";
+import { marked } from "marked";
 
 const DocumentViewerPage: React.FC = () => {
     const router = useRouter();
@@ -66,8 +68,43 @@ const DocumentViewerPage: React.FC = () => {
     };
 
     const handleDownload = (): void => {
-        const filename = `${kind}-${createdAt}.txt`;
-        const blob = new Blob([content], { type: "text/plain" });
+        let blob: Blob;
+        let filename: string;
+
+        if (kind === "note") {
+            const rendered = marked.parse(content, { gfm: true, breaks: false }) as string;
+            const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Note — ${createdAt}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 800px; margin: 40px auto; padding: 24px; line-height: 1.7; color: #1a1a1a; }
+  h1, h2, h3 { color: #6B21D6; }
+  h1 { margin-top: 0; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
+  pre { background: #f4f4f5; padding: 12px 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
+  code { background: #f4f4f5; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.9em; }
+  pre code { background: transparent; padding: 0; }
+  table { border-collapse: collapse; margin: 12px 0; }
+  th, td { border: 1px solid #d1d5db; padding: 8px 12px; }
+  th { background: #f4f4f5; font-weight: 600; }
+  blockquote { border-left: 4px solid #c4b5fd; margin: 12px 0; padding: 4px 16px; color: #4b5563; }
+</style>
+</head>
+<body>
+<h1>Note — ${createdAt}</h1>
+<hr>
+${rendered}
+</body>
+</html>`;
+            blob = new Blob([html], { type: "text/html" });
+            filename = `note-${createdAt}.html`;
+        } else {
+            blob = new Blob([content], { type: "text/plain" });
+            filename = `transcript-${createdAt}.txt`;
+        }
+
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -190,8 +227,17 @@ const DocumentViewerPage: React.FC = () => {
                         padding: "36px 48px",
                         boxShadow: "0 4px 24px rgba(107,33,214,0.08)",
                     }}>
-                        <div style={{ lineHeight: 1.9, color: "#1a1a1a", fontSize: 15 }}>
-                            <ReactMarkdown>{content}</ReactMarkdown>
+                        <style>{`
+    .md-body pre { background: #f4f4f5; padding: 12px 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
+    .md-body code { background: #f4f4f5; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.9em; }
+    .md-body pre code { background: transparent; padding: 0; }
+    .md-body table { border-collapse: collapse; margin: 12px 0; }
+    .md-body th, .md-body td { border: 1px solid #d1d5db; padding: 8px 12px; }
+    .md-body th { background: #f4f4f5; font-weight: 600; }
+    .md-body blockquote { border-left: 4px solid #c4b5fd; margin: 12px 0; padding: 4px 16px; color: #4b5563; }
+`}</style>
+                        <div className="md-body" style={{ lineHeight: 1.9, color: "#1a1a1a", fontSize: 15 }}>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
                         </div>
                     </div>
                 </div>

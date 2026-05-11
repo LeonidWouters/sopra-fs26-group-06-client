@@ -2,7 +2,7 @@
 
 import React, {useEffect, useRef, useState} from 'react';
 import {useParams, useRouter} from 'next/navigation';
-import {Button, Drawer, Form, Input, Modal, notification, Popover, Segmented, Select, Slider, Space, Spin} from "antd";
+import {Button, Form, Input, Modal, notification, Segmented, Select, Slider, Space, Spin} from "antd";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
@@ -12,10 +12,11 @@ import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
 import {
     AudioMutedOutlined, AudioOutlined, CloseCircleOutlined, CommentOutlined, DownloadOutlined,
-    SettingOutlined, SoundOutlined
+    PaperClipOutlined, SettingOutlined
 } from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
 import JSZip from "jszip";
+import { marked } from "marked";
 
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), {ssr: false});
@@ -113,6 +114,7 @@ const RoomPage: React.FC = () => {
     const [accent,setAccent] = useState<string[]>(langs[6][1]);
     const [currentAccent,setCurrentAccent] = useState<string>(accent[0]);
     const langRef = useRef<string>(accent[0])
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
 
 
@@ -120,6 +122,9 @@ const RoomPage: React.FC = () => {
         message: string;
         client: boolean; //handle local vs remote messages
         timestamp: string;
+        isFile?: boolean;
+        fileData?: string;
+        fileName?: string;
     }
 
     const leaveRoom = async (): Promise<void> => {
@@ -170,13 +175,38 @@ const RoomPage: React.FC = () => {
         const date = new Date().toISOString().slice(0, 10);
         const zip = new JSZip();
         zip.file(`transcript_${date}.txt`, downloadDataRef.current.transcript);
-        zip.file(`notes_${date}.md`, downloadDataRef.current.notes);
+
+        const rendered = marked.parse(downloadDataRef.current.notes, { gfm: true, breaks: false }) as string;
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Notes — ${date}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 800px; margin: 40px auto; padding: 24px; line-height: 1.7; color: #1a1a1a; }
+  h1, h2, h3 { color: #6B21D6; }
+  h1 { margin-top: 0; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
+  pre { background: #f4f4f5; padding: 12px 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
+  code { background: #f4f4f5; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.9em; }
+  pre code { background: transparent; padding: 0; }
+  table { border-collapse: collapse; margin: 12px 0; }
+  th, td { border: 1px solid #d1d5db; padding: 8px 12px; }
+  th { background: #f4f4f5; font-weight: 600; }
+  blockquote { border-left: 4px solid #c4b5fd; margin: 12px 0; padding: 4px 16px; color: #4b5563; }
+</style>
+</head>
+<body>
+<h1>Notes — ${date}</h1>
+<hr>
+${rendered}
+</body>
+</html>`;
+        zip.file(`notes_${date}.html`, html);
+
         const zipBlob = await zip.generateAsync({type: "blob"});
         const downloadUrl = URL.createObjectURL(zipBlob);
-        const downloadLink = document.createElement("a");
-        downloadLink.href = downloadUrl;
-        downloadLink.download = `CommunicALL_${date}.zip`;
-        downloadLink.click();
+        handleFileDownload(downloadUrl, `CommunicALL_${date}.zip`);
         URL.revokeObjectURL(downloadUrl);
         setShowDownloadModal(false);
         router.push("/mainpage");
@@ -276,7 +306,7 @@ const RoomPage: React.FC = () => {
         } else if (callStarted && occupancy < 2) {
             leaveRoom();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [occupancy, isCaller, callStarted, isMediaReady]);
 
     useEffect(() => {
@@ -296,8 +326,21 @@ const RoomPage: React.FC = () => {
             };
             processOffer();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [incomingOffer, isMediaReady]);
+
+    function sendHeartbeat(token: string) {
+        apiService.put(`/rooms/${id}/heartbeat`, null, token);
+    }
+
+    useEffect(() =>{
+        if(!callStarted) return;
+        sendHeartbeat(token);
+        const interval = setInterval(() => {
+            sendHeartbeat(token);
+        },30000)
+        return () => clearInterval(interval);
+    }, [callStarted]);
 
     useEffect(() => {
         if (!isReady) return;
@@ -354,6 +397,10 @@ const RoomPage: React.FC = () => {
                 }
             }
 
+            if (message.type === "file-share") {
+                setMessages((messages) => [...messages, message.content]);
+            }
+
             if (message.type === "speech-to-text") {
                 setSubtitleText(message.content);
             }
@@ -405,6 +452,42 @@ const RoomPage: React.FC = () => {
         setChatHistory(false);
     }
 
+    const handleFileDownload = (fileData: string, fileName: string) => {
+        const downloadlink = document.createElement("a");
+        downloadlink.href = fileData;
+        downloadlink.download = fileName;
+        downloadlink.click();
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const fileReader = new FileReader();
+        fileReader.onload = () => {
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const localMessage: textMsg = {
+                message: file.name,
+                client: true,
+                timestamp,
+                isFile: true,
+                fileData: fileReader.result as string,
+                fileName: file.name};
+
+            const remoteMessage: textMsg = {
+                message: file.name,
+                client: false,
+                timestamp,
+                isFile: true,
+                fileData: fileReader.result as string,
+                fileName: file.name
+            };
+            wsRef.current?.send(JSON.stringify({ type: "file-share", content: remoteMessage }));
+            setMessages((messages) => [...messages, localMessage]);};
+
+        fileReader.readAsDataURL(file);
+        e.target.value = "";
+    };
 
     const setupPeerConnection = () => {
 
@@ -499,11 +582,11 @@ const RoomPage: React.FC = () => {
             window.speechSynthesis.speak(utterance);
         }
         notification.info({
-                title: "Voice changed",
-                description: `Voice was changed to ${voice.name}`,
-                placement: "top",
-                duration: 2,
-            });
+            title: "Voice changed",
+            description: `Voice was changed to ${voice.name}`,
+            placement: "top",
+            duration: 2,
+        });
 
 
         if(wsRef.current) {
@@ -532,7 +615,6 @@ const RoomPage: React.FC = () => {
 
     function startTTT() {
         setChat(true);//turns on chat feature so it is visible
-
     }
 
     function startSTT() {
@@ -712,46 +794,49 @@ const RoomPage: React.FC = () => {
     const  closeSettings = () => {
         setSettingsModal(false);
     }
+    useEffect(() => {
+        if (chat) setChatHistory(true);
+    }, [chat]);
 
     return (
         <>
-        <div style={{display: "flex", flexDirection: "column", width: "100%", height: "100vh"}}>
+            <div style={{display: "flex", flexDirection: "column", width: "100%", height: "100vh"}}>
 
-            <div className={styles.navbar}>
-                <div className={styles.logoWrapper} onClick={() => router.push('/mainpage')} style={{cursor: 'pointer'}}>
-                    <Image
-                        src="/unnamed-Photoroom.png"
-                        alt="CommunicALL"
-                        width={200}
-                        height={55}
-                        style={{width: "auto", maxWidth: "200px", height: "100%", maxHeight: "55px"}}
-                    />
-                </div>
+                <div className={styles.navbar}>
+                    <div className={styles.logoWrapper} onClick={() => router.push('/mainpage')} style={{cursor: 'pointer'}}>
+                        <Image
+                            src="/unnamed-Photoroom.png"
+                            alt="CommunicALL"
+                            width={200}
+                            height={55}
+                            style={{width: "auto", maxWidth: "200px", height: "100%", maxHeight: "55px"}}
+                        />
+                    </div>
 
-                <div style={{display: "flex", alignItems: "center", gap: "24px"}}>
-                    <div style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        alignItems: "flex-end"
-                    }}>
-                        <div style={{
-                            margin: 0,
-                            color: "black",
-                            fontSize: "16px",
-                            fontWeight: "bold",
-                            lineHeight: "1.2"
-                        }}>
-                            {roomName}
-                        </div>
+                    <div style={{display: "flex", alignItems: "center", gap: "24px"}}>
                         <div style={{
                             display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            color: "black",
-                            fontSize: "13px",
-                            marginTop: "2px"
+                            flexDirection: "column",
+                            justifyContent: "center",
+                            alignItems: "flex-end"
                         }}>
+                            <div style={{
+                                margin: 0,
+                                color: "black",
+                                fontSize: "16px",
+                                fontWeight: "bold",
+                                lineHeight: "1.2"
+                            }}>
+                                {roomName}
+                            </div>
+                            <div style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                color: "black",
+                                fontSize: "13px",
+                                marginTop: "2px"
+                            }}>
                             <span style={{
                                 width: "8px",
                                 height: "8px",
@@ -759,296 +844,273 @@ const RoomPage: React.FC = () => {
                                 borderRadius: "50%",
                                 display: "inline-block"
                             }}></span>
-                            {occupancy}/2 in room
+                                {occupancy}/2 in room
+                            </div>
                         </div>
-                    </div>
-                    <div className={styles.navButtons}>
-                        <Button
-                            color="danger"
-                            variant="text"
-                            icon={<CloseCircleOutlined/>}
-                            onClick={() => Modal.confirm({
-                                title: "Leave the call?",
-                                content: "Your shared notes will be saved automatically.",
-                                okText: "Leave",
-                                okButtonProps: { danger: true },
-                                cancelText: "Stay",
-                                onOk: leaveRoom,
-                            })}
-                        >
-                            Leave Call
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
-            <div style={{display: "flex", flex: 1}}>
-                <div style={{
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    overflow: "hidden",
-                    margin: "12px"
-                }}>
-                    <div style={{flex: 1, position: "relative", backgroundColor: "#1a0533"}}>
-                        {occupancy < 2 ? (
-                            <div style={{
-                                width: "100%",
-                                height: "100%",
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: "16px",
-                                color: "#c9c2c2"
-                            }}>
-                                <Spin size="large"/>
-                                <p style={{margin: 0, fontSize: "16px"}}>Waiting for someone to join...</p>
-                            </div>
-                        ) : (
-                            <video
-                                ref={remoteRef}
-                                autoPlay
-                                style={{width: "100%", height: "100%", objectFit: "cover"}}
-                            />
-                        )}
-
-                        <video
-                            ref={clientRef}
-                            autoPlay
-                            muted
-                            style={{
-                                position: "absolute",
-                                top: "16px",
-                                left: "16px",
-                                width: "200px",
-                                borderRadius: "12px",
-                                backgroundColor: "#2e1065"
-                            }}
-                            poster="/nocamera.png"
-                        />
-
-                        {subtitleText && (
-                            <div style={{
-                                position: "absolute",
-                                bottom: "16px",
-                                left: "50%",
-                                transform: "translateX(-50%)",
-                                backgroundColor: "rgba(0, 0, 0, 0.65)",
-                                color: "#ffffff",
-                                padding: "10px 24px",
-                                borderRadius: "8px",
-                                fontSize: subtitleSize,
-                                fontWeight: 500,
-                                maxWidth: "80%",
-                                textAlign: "center",
-                                pointerEvents: "none",
-                            }}>
-                                {subtitleText}
-                            </div>
-                        )}
-                        {remoteMuted && (
-                            <div style={{
-                                position: "absolute",
-                                top: "16px",
-                                right: "16px",
-                                backgroundColor: "rgba(239, 68, 68, 0.85)",
-                                color: "#000000",
-                                padding: "6px 14px",
-                                borderRadius: "8px",
-                                fontSize: "13px",
-                                fontWeight: 600,
-                            }}>
-                                {`@${participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner"} is muted`}
-                            </div>
-                        )}
-                    </div>
-
-                    <div style={{padding: "10px 24px", borderTop: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "#ffffff"}}>
-                        {/* Left: chat */}
-                        <Space size={"small"} align={"center"}>
-                        <div style={{display: "flex", alignItems: "center",gap:12, flex: 1}}>
-                            <Button size="large" onClick={loadChat} style={{borderRadius: 5, whiteSpace: "nowrap", backgroundColor:"#e0ccf5"}} icon={<CommentOutlined/>}>
-                            </Button>
-
-                            <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1}}>
-                                <Form.Item name="message" style={{flex: 1, width: "100%"}} hidden={!chat}>
-                                    <Input placeholder="Send a message…" style={{borderRadius: 8}}/>
-                                </Form.Item>
-                            </Form>
-                        </div>
-                        </Space>
-                        {ttsEnabledBool ? <Popover
-                            trigger="click"
-                            title="Choose a Voice "
-                            content={
-                                <Select
-                                    style={{ width: 400 }}
-                                    defaultValue={0}
-                                    onChange={(index) => chooseVoice(index)}
-                                    options={window.speechSynthesis.getVoices().map((voice, index) => ({
-                                        label: voice.name,
-                                        value: index
-                                    }))}
-                                />
-                            }
-                        >
-                            <Button  size={"large"} style={{justifyItems : "flex-end"}} icon={<SoundOutlined />} />
-                        </Popover> : null}
-
-                        {/* Center: mute + volume */}
-                        <Space size="middle" align="center">
-                        <div style={{display: "flex", alignItems: "center", gap: 16, background: "#FFFFFF", borderRadius: 20, padding: 7}}>
+                        <div className={styles.navButtons}>
                             <Button
-                                shape="circle"
-                                size="large"
-                                icon={isMuted ? <AudioMutedOutlined/> : <AudioOutlined/>}
-                                onClick={toggleMute}
-                                style={{backgroundColor: isMuted ? "#ef4444" : "#6B21D6", color: "white", border: "none", width: 44, height: 44}}
-                            />
-                            <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: 2}}>
-                                <div style={{display: "flex", alignItems: "center", gap: 6}}>
-                                    <span style={{fontSize: 16}}>{volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}</span>
-                                    <input
-                                        type="range"
-                                        min={0}
-                                        max={1}
-                                        step={0.05}
-                                        value={volume}
-                                        onChange={e => {
-                                            const v = parseFloat(e.target.value);
-                                            setVolume(v);
-                                            if (remoteRef.current) remoteRef.current.volume = v;
-                                            localStorage.setItem("callVolume", String(v));
-                                        }}
-                                        style={{width: 90, accentColor: "#6B21D6", cursor: "pointer"}}
-                                    />
-                                </div>
-                                <span style={{fontSize: 10, color: "#9ca3af"}}>{Math.round(volume * 100)}%</span>
-                            </div>
-                    </div>
-                        </Space>
-
-                        <Drawer title="Chat History" open={chatHistory} onClose={closeChat} placement="left" mask={false}>
-                            {messages.map((msg, index) => (
-                                <div key={index} style={{padding: "8px 12px", marginBottom: 8, backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: 8, color: "white"}}>
-                                    {msg.timestamp + ", " + (msg.client ? myUsername : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner")) + " : " + msg.message}
-                                </div>
-                            ))}</Drawer>
-                    <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
-                        <Space size={"small"} align={"center"}>
-                        {sttEnabledBool ? (
-                            <Space.Compact>
-                            <Popover
-                            trigger="click"
-                            title="Chosse recognized language"
-                            content={
-                                <Select
-                                    style={{ width: 400 }}
-                                    defaultValue={0}
-                                    onChange={(index) => chooseLang(index)}
-                                    options={langs.map((language, index) => ({
-                                        label: language[0],
-                                        value: index
-                                    }))}
-                                />
-                            }
-                        >
-                            <Button  style={{color:"black"}} title={lang} type={"default"}>{lang}</Button>
-                        </Popover>
-                        <Popover
-                            placement={"top"}
-                            trigger = "click"
-                            title = "Select Accent"
-                            content = {
-                                <Select
-                                    style={{ width: 400 }}
-                                    defaultValue={0}
-                                    onChange={(index) => chooseAccent(index)}
-                                    options={accent.map((accents, index) => ({
-                                        label: accents,
-                                        value: index
-                                    }))}
-                                />
-                            }
-                        >
-                            <Button  style={{color:"white", backgroundColor : "#ff71fb"}} title={currentAccent} type={"default"}>{currentAccent
-                            }</Button>
-                        </Popover>
-                            </Space.Compact>) : null}
-                        </Space>
-                        <Space size="small" align="center">
-                            <Modal title={"Settings"} onCancel={() => closeSettings()} open={showSettingsModal} okText={"Apply"} onOk={() => closeSettings()}>
-                                <h4>Subtitle Size</h4>
-                                <p style={{fontSize : subtitleSize, alignContent:"center"}}>Example Text</p>
-                                <Slider style={{width: "50%"}} defaultValue={16} min={8} max={40} onChange={(value) => setSubtitleSize(value.toString()+"px")}></Slider>
-                            </Modal>
-                            <Button icon={<SettingOutlined/>} onClick={() => showSettings()}></Button>
-                        </Space>
-                    </div>
-
+                                color="danger"
+                                variant="text"
+                                icon={<CloseCircleOutlined/>}
+                                onClick={() => Modal.confirm({
+                                    title: "Leave the call?",
+                                    content: "Your shared notes will be saved automatically.",
+                                    okText: "Leave",
+                                    okButtonProps: { danger: true },
+                                    cancelText: "Stay",
+                                    onOk: leaveRoom,
+                                })}
+                            >
+                                Leave Call
+                            </Button>
+                        </div>
                     </div>
                 </div>
-                <div style={{flex: 1, padding: "24px", display: "flex", flexDirection: "column"}}>
+
+                <div style={{display: "flex", flex: 1}}>
                     <div style={{
-                        display: "flex", //notes linke seite
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: "16px"
+                        flex: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        overflow: "hidden",
+                        margin: "12px"
                     }}>
-                        <h2 style={{color: "black", margin: 0}}>Shared Notes</h2>
+                        <div style={{flex: 1, position: "relative", backgroundColor: "#1a0533"}}>
+                            {occupancy < 2 ? (
+                                <div style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: "16px",
+                                    color: "#c9c2c2"
+                                }}>
+                                    <Spin size="large"/>
+                                    <p style={{margin: 0, fontSize: "16px"}}>Waiting for someone to join...</p>
+                                </div>
+                            ) : (
+                                <video
+                                    ref={remoteRef}
+                                    autoPlay
+                                    style={{width: "100%", height: "100%", objectFit: "cover"}}
+                                />
+                            )}
 
-                        <Segmented
-                            options={participants}
-                            value={activeEditor}
-                            disabled={editorTimeout}
-                            onChange={(value) => {
-                                setEditorTimeout(true);
-                                setTimeout(() => setEditorTimeout(false), 10000);
-                                const newEditor = value as string;
-                                setActiveEditor(newEditor);
-                                if (wsRef.current?.readyState === WebSocket.OPEN) {
-                                    wsRef.current.send(JSON.stringify({ type: "editor-change", editor: newEditor }));
-                                }
-                            }}
-                        />
+                            <video
+                                ref={clientRef}
+                                autoPlay
+                                muted
+                                style={{
+                                    position: "absolute",
+                                    top: "16px",
+                                    left: "16px",
+                                    width: "200px",
+                                    borderRadius: "12px",
+                                    backgroundColor: "#2e1065"
+                                }}
+                                poster="/nocamera.png"
+                            />
+
+                            {subtitleText && (
+                                <div style={{
+                                    position: "absolute",
+                                    bottom: "16px",
+                                    left: "50%",
+                                    transform: "translateX(-50%)",
+                                    backgroundColor: "rgba(0, 0, 0, 0.65)",
+                                    color: "#ffffff",
+                                    padding: "10px 24px",
+                                    borderRadius: "8px",
+                                    fontSize: subtitleSize,
+                                    fontWeight: 500,
+                                    maxWidth: "80%",
+                                    textAlign: "center",
+                                    pointerEvents: "none",
+                                }}>
+                                    {subtitleText}
+                                </div>
+                            )}
+                            {remoteMuted && (
+                                <div style={{
+                                    position: "absolute",
+                                    top: "16px",
+                                    right: "16px",
+                                    backgroundColor: "rgba(239, 68, 68, 0.85)",
+                                    color: "#000000",
+                                    padding: "6px 14px",
+                                    borderRadius: "8px",
+                                    fontSize: "13px",
+                                    fontWeight: 600,
+                                }}>
+                                    {`@${participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner"} is muted`}
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{padding: "10px 24px", borderTop: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "#ffffff"}}>
+                            <Space size={"small"} align={"center"}>
+                                <div style={{display: "flex", alignItems: "center", gap: 12, flex: 1}}>
+                                    <Button size="large" onClick={chatHistory ? closeChat : loadChat} style={{borderRadius: 5, whiteSpace: "nowrap", backgroundColor: "#e0ccf5"}} icon={<CommentOutlined/>}/>
+                                    <input type="file" ref={fileInputRef} style={{display: "none"}} onChange={handleFileSelect}/>
+                                    <Button size="large" title="Attach file" onClick={() => fileInputRef.current?.click()} style={{borderRadius: 5, backgroundColor: "#e0ccf5"}} icon={<PaperClipOutlined/>}/>
+
+                                    <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1}}>
+                                        <Form.Item name="message" style={{flex: 1, width: "100%"}} hidden={!chat}>
+                                            <Input placeholder="Send a message…" style={{borderRadius: 8}}/>
+                                        </Form.Item>
+                                    </Form>
+                                </div>
+                            </Space>
+
+                            <Space size="middle" align="center">
+                                <div style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 16,
+                                    background: "#f0ebfa",
+                                    borderRadius: 20,
+                                    padding: "6px 18px",
+                                }}>
+                                    <Button
+                                        shape="circle"
+                                        size="large"
+                                        icon={isMuted ? <AudioMutedOutlined/> : <AudioOutlined/>}
+                                        onClick={toggleMute}
+                                        style={{backgroundColor: isMuted ? "#ef4444" : "#6B21D6", color: "white", border: "none", width: 44, height: 44}}
+                                    />
+                                    <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: 2}}>
+                                        <div style={{display: "flex", alignItems: "center", gap: 6}}>
+                                            <span style={{fontSize: 16}}>{volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}</span>
+                                            <input
+                                                type="range"
+                                                min={0}
+                                                max={1}
+                                                step={0.05}
+                                                value={volume}
+                                                onChange={e => {
+                                                    const v = parseFloat(e.target.value);
+                                                    setVolume(v);
+                                                    if (remoteRef.current) remoteRef.current.volume = v;
+                                                    localStorage.setItem("callVolume", String(v));
+                                                }}
+                                                style={{width: 90, accentColor: "#6B21D6", cursor: "pointer"}}
+                                            />
+                                        </div>
+                                        <span style={{fontSize: 10, color: "#9ca3af"}}>{Math.round(volume * 100)}%</span>
+                                    </div>
+                                </div>
+                            </Space>
+
+                            <Space size="small" align="center">
+                                <Modal title={"Settings"} onCancel={() => closeSettings()} open={showSettingsModal} okText={"Apply"} onOk={() => closeSettings()}>
+                                    <h4>Subtitle Size</h4>
+                                    <p style={{fontSize : subtitleSize, alignContent:"center"}}>Example Text</p>
+                                    <Slider style={{width: "50%"}} defaultValue={16} min={8} max={40} onChange={(value) => setSubtitleSize(value.toString()+"px")}></Slider>
+                                    {ttsEnabledBool && (<>
+                                        <h4 style={{marginTop: 16}}>Voice</h4>
+                                        <Select style={{width: "100%"}} defaultValue={0} onChange={(index) => chooseVoice(index)} options={window.speechSynthesis.getVoices().map((voice, index) => ({label: voice.name, value: index}))}/>
+                                    </>)}
+                                    {sttEnabledBool && (<>
+                                        <h4 style={{marginTop: 16}}>Recognition Language</h4>
+                                        <Select style={{width: "100%"}} defaultValue={0} onChange={(index) => chooseLang(index)} options={langs.map((language, index) => ({label: language[0], value: index}))}/>
+                                        <h4 style={{marginTop: 16}}>Accent</h4>
+                                        <Select style={{width: "100%"}} defaultValue={0} onChange={(index) => chooseAccent(index)} options={accent.map((accents, index) => ({label: accents, value: index}))}/>
+                                    </>)}
+                                </Modal>
+                                <Button icon={<SettingOutlined/>} onClick={() => showSettings()}></Button>
+                            </Space>
+                        </div>
                     </div>
 
-                    <div data-color-mode="light" style={{flex: 1}}>
-                        {activeEditor === myUsername?(
-                        <MDEditor
-                            value={markdownText}
-                            onChange={(value: string | undefined) => {
-                                const newText = value || '';
-                                setMarkdownText(newText);
-                                if (wsRef.current?.readyState === WebSocket.OPEN) {
-                                    wsRef.current.send(JSON.stringify({ type: "markdown-update", content: newText }));
-                                }
-                            }}
-                            height={400}
-                            textareaProps={{
-                                placeholder: "# Shared notes\n\nHere you can collaboratively edit notes..."
-                            }}
-                        />) : (
-                            <MDEditor hideToolbar={true} value = {markdownText} preview={"preview"} height={400}/>
+                    {chatHistory && (
+                        <aside style={{width: 320, margin: "12px 0", background: "#ffffff", borderRadius: 8, border: "1px solid #e5e7eb", display: "flex", flexDirection: "column", overflow: "hidden"}}>
+                            <div style={{padding: "12px 16px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center"}}>
+                                <span style={{fontWeight: 500}}><CommentOutlined style={{marginRight: 6}}/>Chat</span>
+                                <Button type="text" size="small" icon={<CloseCircleOutlined/>} onClick={closeChat}/>
+                            </div>
+                            <div style={{flex: 1, overflowY: "auto", padding: 12}}>
+                                {messages.map((msg, index) => {
+                                    const senderName = msg.client ? myUsername : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner");
+                                    return (
+                                        <div key={index} style={{padding: "8px 12px", marginBottom: 8, backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: 8, color: "white"}}>
+                                            {msg.isFile ? (
+                                                <div style={{display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap"}}>
+                                                    <PaperClipOutlined/>
+                                                    <span style={{flex: 1, minWidth: 0, wordBreak: "break-word"}}>{msg.timestamp + ", " + senderName + " shared: " + msg.fileName}</span>
+                                                    <Button size="small" icon={<DownloadOutlined/>} onClick={() => handleFileDownload(msg.fileData!, msg.fileName!)}>Download</Button>
+                                                </div>
+                                            ) : (
+                                                msg.timestamp + ", " + senderName + " : " + msg.message
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </aside>
+                    )}
+
+                    <div style={{flex: 1, padding: "24px", display: "flex", flexDirection: "column"}}>
+                        <div style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "16px"
+                        }}>
+                            <h2 style={{color: "black", margin: 0}}>Shared Notes</h2>
+
+                            <Segmented
+                                options={participants}
+                                value={activeEditor}
+                                disabled={editorTimeout}
+                                onChange={(value) => {
+                                    setEditorTimeout(true);
+                                    setTimeout(() => setEditorTimeout(false), 10000);
+                                    const newEditor = value as string;
+                                    setActiveEditor(newEditor);
+                                    if (wsRef.current?.readyState === WebSocket.OPEN) {
+                                        wsRef.current.send(JSON.stringify({ type: "editor-change", editor: newEditor }));
+                                    }
+                                }}
+                            />
+                        </div>
+
+                        <div data-color-mode="light" style={{flex: 1}}>
+                            {activeEditor === myUsername?(
+                                <MDEditor
+                                    value={markdownText}
+                                    onChange={(value: string | undefined) => {
+                                        const newText = value || '';
+                                        setMarkdownText(newText);
+                                        if (wsRef.current?.readyState === WebSocket.OPEN) {
+                                            wsRef.current.send(JSON.stringify({ type: "markdown-update", content: newText }));
+                                        }
+                                    }}
+                                    height={400}
+                                    textareaProps={{
+                                        placeholder: "# Shared notes\n\nHere you can collaboratively edit notes..."
+                                    }}
+                                />) : (
+                                <MDEditor hideToolbar={true} value = {markdownText} preview={"preview"} height={400}/>
                             )
-                        }
+                            }
+                        </div>
                     </div>
-                </div>
 
+                </div>
             </div>
-        </div>
-        <Modal
-            title="Download your files"
-            open={showDownloadModal}
-            onOk={handleDownload}
-            onCancel={() => { setShowDownloadModal(false); router.push("/mainpage"); }}
-            okText="Download ZIP"
-            cancelText="Skip"
-            okButtonProps={{icon: <DownloadOutlined/>}}
-        >
-            <p>Download your transcript and notes as a ZIP?</p>
-        </Modal>
+            <Modal
+                title="Download your files"
+                open={showDownloadModal}
+                onOk={handleDownload}
+                onCancel={() => { setShowDownloadModal(false); router.push("/mainpage"); }}
+                okText="Download ZIP"
+                cancelText="Skip"
+                okButtonProps={{icon: <DownloadOutlined/>}}
+            >
+                <p>Download your transcript and notes as a ZIP?</p>
+            </Modal>
         </>
     );
 };
