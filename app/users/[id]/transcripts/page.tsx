@@ -1,8 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Button, Spin, Badge, Tooltip, Modal } from "antd";
-import { DeleteOutlined, DownloadOutlined, EyeOutlined, FileTextOutlined, LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { Button, Spin, Badge, Tooltip, Modal, Radio, DatePicker, Drawer } from "antd";
+import { DeleteOutlined, DownloadOutlined, EyeOutlined, FileTextOutlined, LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FilterOutlined ,CalendarOutlined} from "@ant-design/icons";
 import Image from "next/image";
 import mainStyles from "@/styles/mainpage.module.css";
 import styles from "./transcripts.module.css";
@@ -12,6 +12,8 @@ import useLocalStorage from "@/hooks/useLocalStorage";
 import { DocumentItem, UserDocumentsGetDTO } from "@/types/transcript";
 import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 import {User} from "@/types/user";
+import { marked } from "marked";
+import dayjs from "dayjs";
 
 const TranscriptsPage: React.FC = () => {
     const router = useRouter();
@@ -25,7 +27,38 @@ const TranscriptsPage: React.FC = () => {
     const [items, setItems] = useState<DocumentItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [me, setMe] = useState<User | null>(null);
+    const [itemType, setItemType] = useState<"all" | "transcript" | "note">("all");
+    const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+    const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([null, null]);
+    const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
+    const hasActiveFilters = itemType !== "all" || sortOrder !== "newest" || dateRange[0] !== null;
+
+    const handleLogout = (): void => {
+        apiService.put("/users/logout", null, token);
+        clearToken();
+        clearId();
+        router.push("/");
+    };
+
+    const filteredAndSortedItems = items
+        .filter(item => {
+            if (itemType === "all") return true;
+            return item.kind === itemType;})
+
+        .filter(item => {
+            const [startDate, endDate] = dateRange;
+            if (!startDate || !endDate) return true;
+            const itemDate = dayjs(item.createdAt);
+            if (itemDate.isBefore(startDate.startOf("day"))) return false;
+            if (itemDate.isAfter(endDate.endOf("day"))) return false;
+            return true;})
+
+        .sort((a, b) => {
+            if (sortOrder === "newest") {
+                return b.createdAt.localeCompare(a.createdAt);
+            } else {
+                return a.createdAt.localeCompare(b.createdAt);}});
     useEffect(() => {
         if (!isReady) return;
         if (!token) {
@@ -52,16 +85,45 @@ const TranscriptsPage: React.FC = () => {
         fetchDocuments();
     }, [isReady, token, id, router, apiService]);
 
-    const handleLogout = (): void => {
-        apiService.put("/users/logout", null, token);
-        clearToken();
-        clearId();
-        router.push("/");
-    };
-
     const handleDownload = (item: DocumentItem) => {
-        const filename = `${item.kind}-${item.createdAt.slice(0, 10)}-${item.id}.txt`;
-        const blob = new Blob([item.content ?? ""], { type: "text/plain" });
+        const date = item.createdAt.slice(0, 10);
+        let blob: Blob;
+        let filename: string;
+
+        if (item.kind === "note") {
+            const rendered = marked.parse(item.content ?? "", { gfm: true, breaks: false }) as string;
+            const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Note — ${date}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 800px; margin: 40px auto; padding: 24px; line-height: 1.7; color: #1a1a1a; }
+  h1, h2, h3 { color: #6B21D6; }
+  h1 { margin-top: 0; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
+  pre { background: #f4f4f5; padding: 12px 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
+  code { background: #f4f4f5; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.9em; }
+  pre code { background: transparent; padding: 0; }
+  table { border-collapse: collapse; margin: 12px 0; }
+  th, td { border: 1px solid #d1d5db; padding: 8px 12px; }
+  th { background: #f4f4f5; font-weight: 600; }
+  blockquote { border-left: 4px solid #c4b5fd; margin: 12px 0; padding: 4px 16px; color: #4b5563; }
+</style>
+</head>
+<body>
+<h1>Note — ${date}</h1>
+<hr>
+${rendered}
+</body>
+</html>`;
+            blob = new Blob([html], { type: "text/html" });
+            filename = `note-${date}-${item.id}.html`;
+        } else {
+            blob = new Blob([item.content ?? ""], { type: "text/plain" });
+            filename = `transcript-${date}-${item.id}.txt`;
+        }
+
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -130,15 +192,15 @@ const TranscriptsPage: React.FC = () => {
                             <FileTextOutlined/>
                         </div>
                     </Tooltip>
+                    <Tooltip title="Calendar" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => router.push(`/users/${loggedInId}/calendar`)}>
+                            <CalendarOutlined/>
+                        </div>
+                    </Tooltip>
                 </div>
                 <div className={mainStyles.sidebarBottom}>
                     <Tooltip title="Sign Out" placement="right">
-                        <div className={mainStyles.sbIcon} onClick={() => {
-                            apiService.put("/users/logout", null, token);
-                            clearToken();
-                            clearId();
-                            router.push("/");
-                        }}>
+                        <div className={mainStyles.sbIcon} onClick={handleLogout}>
                             <LogoutOutlined/>
                         </div>
                     </Tooltip>
@@ -162,7 +224,41 @@ const TranscriptsPage: React.FC = () => {
                     Back
                 </Button>
                 <div className={mainStyles.mainContent}>
-                <h1 className={styles.pageTitle}>Available Transcripts &amp; Notes</h1>
+                    <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32}}>
+                        <h1 className={styles.pageTitle} style={{margin: 0}}>Available Transcripts &amp; Notes</h1>
+                        <Badge dot={hasActiveFilters} color="#6d28d9">
+                            <Button icon={<FilterOutlined/>} onClick={() => setIsFilterMenuOpen(true)}>Filter</Button>
+                        </Badge>
+                    </div>
+
+                    <Drawer title="Filter & Sort" placement="right" open={isFilterMenuOpen} onClose={() => setIsFilterMenuOpen(false)} width={260}>
+                        <div style={{marginBottom: 8, fontSize: 12, fontWeight: 700, color: "#6d28d9", textTransform: "uppercase", letterSpacing: "0.05em"}}>Type</div>
+                        <Radio.Group value={itemType} onChange={e => setItemType(e.target.value)} style={{display: "flex", flexDirection: "column", gap: 8, marginBottom: 24}}>
+                            <Radio value="all">All</Radio>
+                            <Radio value="transcript">Transcripts</Radio>
+                            <Radio value="note">Notes</Radio>
+                        </Radio.Group>
+
+                        <div style={{marginBottom: 8, fontSize: 12, fontWeight: 700, color: "#6d28d9", textTransform: "uppercase", letterSpacing: "0.05em"}}>Date Range</div>
+                        <DatePicker.RangePicker
+                            value={dateRange[0] && dateRange[1] ? [dateRange[0], dateRange[1]] : null}
+                            onChange={val => setDateRange(val ? [val[0], val[1]] : [null, null])}
+                            style={{width: "100%", marginBottom: 24}}
+                            size="small"
+                        />
+
+                        <div style={{marginBottom: 8, fontSize: 12, fontWeight: 700, color: "#6d28d9", textTransform: "uppercase", letterSpacing: "0.05em"}}>Sort</div>
+                        <Radio.Group value={sortOrder} onChange={e => setSortOrder(e.target.value)} style={{display: "flex", flexDirection: "column", gap: 8, marginBottom: 24}}>
+                            <Radio value="newest">Newest</Radio>
+                            <Radio value="oldest">Oldest</Radio>
+                        </Radio.Group>
+
+                        {hasActiveFilters && (
+                            <Button style={{width: "100%"}} onClick={() => { setItemType("all"); setSortOrder("newest"); setDateRange([null, null]); }}>
+                                Reset
+                            </Button>
+                        )}
+                    </Drawer>
 
                 {items.length === 0 ? (
                     <div className={styles.emptyState}>
@@ -172,7 +268,7 @@ const TranscriptsPage: React.FC = () => {
                     </div>
                 ) : (
                     <div className={styles.grid}>
-                        {items.map((item) => (
+                        {filteredAndSortedItems.map((item) => (
                             <div key={`${item.kind}-${item.id}`} className={styles.card}>
                                 <button
                                     className={styles.deleteBtn}
@@ -266,11 +362,11 @@ const TranscriptsPage: React.FC = () => {
                                     Download
                                 </Button>
                             </div>
-                        ))}
-                    </div>
-                )}
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
         </div>
     );
 };

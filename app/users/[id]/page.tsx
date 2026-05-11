@@ -1,5 +1,5 @@
 "use client";
-import {Button, Form, Input, Radio, Tabs, message, Badge, Tooltip, Upload} from "antd";
+import {Button, Form, Input, Radio, Tabs, message, Badge, Tooltip, Upload, Spin} from "antd";
 import React, {useEffect, useState} from "react";
 import {useParams, useRouter} from "next/navigation";
 import {useApi} from "@/hooks/useApi";
@@ -8,7 +8,7 @@ import useLocalStorage from "@/hooks/useLocalStorage";
 import {useAuth} from "@/hooks/useAuth";
 import mainStyles from "@/styles/mainpage.module.css";
 import profileStyles from "@/styles/profile.module.css";
-import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined, CameraOutlined} from "@ant-design/icons";
+import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined, CameraOutlined, CalendarOutlined,PhoneOutlined,EditOutlined} from "@ant-design/icons";
 import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 import Image from "next/image";
 import {PasswordInput} from "antd-password-input-strength";
@@ -18,6 +18,14 @@ import {PasswordInput} from "antd-password-input-strength";
 interface FormFieldProps {
     password: string;
     confirmPassword: string;
+}
+
+interface UserStats {
+    userId: number;
+    totalSessions: number;
+    totalTranscripts: number;
+    totalNotes: number;
+    totalFriends: number;
 }
 
 const Profile: React.FC = () => {
@@ -41,6 +49,7 @@ const Profile: React.FC = () => {
     const [requestSent, setRequestSent] = useState(false);
     const [me, setMe] = useState<User | null>(null);
     const [uploadingPicture, setUploadingPicture] = useState(false);
+    const [stats, setStats] = useState<UserStats | null>(null);
 
     const handleProfilePictureUpload = (file: File) => {
         if (file.size > 2 * 1024 * 1024) { messageApi.open({type: "error", content: "Max 2MB"}); return false; }
@@ -106,6 +115,12 @@ const Profile: React.FC = () => {
                     setMe(fetchedMe);
                 } else {
                     setMe(user);
+                }
+                try {
+                    const fetchedStats = await apiService.get<UserStats>(`/users/${id}/stats`, token);
+                    setStats(fetchedStats);
+                } catch {
+                    // stats are optional, don't block the page
                 }
             } catch (error) {
                 messageApi.open({type: "error", content: "Could not load user."});
@@ -174,7 +189,11 @@ const Profile: React.FC = () => {
         }
     };
 
-    if (!user) return <div>Loading...</div>;
+    if (!user) return (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", background: "#fff" }}>
+            <Spin size="large" />
+        </div>
+    );
 
     return (
         <div className={mainStyles.appShell}>
@@ -202,6 +221,11 @@ const Profile: React.FC = () => {
                             <FileTextOutlined/>
                         </div>
                     </Tooltip>
+                    <Tooltip title="Calendar" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => router.push(`/users/${loggedInId}/calendar`)}>
+                            <CalendarOutlined/>
+                        </div>
+                    </Tooltip>
                 </div>
                 <div className={mainStyles.sidebarBottom}>
                     <Tooltip title="Sign Out" placement="right">
@@ -210,7 +234,6 @@ const Profile: React.FC = () => {
                         </div>
                     </Tooltip>
                     <Tooltip title="My Profile" placement="right">
-                        <Tooltip title="My Profile" placement="right">
                         <div
                             className={mainStyles.sbAvatar}
                             style={me?.profilePicture ? {} : {backgroundColor: getAvatarColor(me?.username ?? "")}}
@@ -221,8 +244,6 @@ const Profile: React.FC = () => {
                                 : getAvatarInitials(me?.username ?? "")
                             }
                         </div>
-                    </Tooltip>
-
                     </Tooltip>
                 </div>
             </aside>
@@ -282,6 +303,32 @@ const Profile: React.FC = () => {
                         </div>
                     </div>
                 </div>
+
+                {stats && (
+                    <div className={profileStyles.card} style={{marginTop: 16}}>
+                        <div style={{fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 16}}>Activity</div>
+                        <div style={{display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12}}>
+                            {[
+                                {icon: <PhoneOutlined style={{fontSize: 22, color: "#6B21D6"}}/>, label: "Calls Joined", value: stats.totalSessions},
+                                {icon: <FileTextOutlined style={{fontSize: 22, color: "#6B21D6"}}/>, label: "Transcripts", value: stats.totalTranscripts},
+                                {icon: <EditOutlined style={{fontSize: 22, color: "#6B21D6"}}/>, label: "Notes", value: stats.totalNotes},
+                                {icon: <TeamOutlined style={{fontSize: 22, color: "#6B21D6"}}/>, label: "Friends", value: stats.totalFriends},
+                            ].map(item => (
+                                <div key={item.label} style={{
+                                    background: "#F5EFFD",
+                                    border: "1px solid #E0CCF5",
+                                    borderRadius: 12,
+                                    padding: "20px 8px",
+                                    textAlign: "center",
+                                }}>
+                                    {item.icon}
+                                    <div style={{fontSize: 28, fontWeight: 700, color: "#6B21D6", marginTop: 8}}>{item.value}</div>
+                                    <div style={{fontSize: 12, color: "#9ca3af", marginTop: 4}}>{item.label}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {isOwnProfile && (
                     <div className={profileStyles.card}>
