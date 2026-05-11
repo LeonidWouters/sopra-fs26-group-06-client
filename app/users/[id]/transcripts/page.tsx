@@ -34,6 +34,13 @@ const TranscriptsPage: React.FC = () => {
 
     const hasActiveFilters = itemType !== "all" || sortOrder !== "newest" || dateRange[0] !== null;
 
+    const handleLogout = (): void => {
+        apiService.put("/users/logout", null, token);
+        clearToken();
+        clearId();
+        router.push("/");
+    };
+
     const filteredAndSortedItems = items
         .filter(item => {
             if (itemType === "all") return true;
