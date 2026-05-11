@@ -1,8 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Button, Spin, Badge, Tooltip, Modal } from "antd";
-import { DeleteOutlined, DownloadOutlined, EyeOutlined, FileTextOutlined, LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { Button, Spin, Badge, Tooltip, Modal, Radio, DatePicker, Drawer } from "antd";
+import { DeleteOutlined, DownloadOutlined, EyeOutlined, FileTextOutlined, LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FilterOutlined } from "@ant-design/icons";
 import Image from "next/image";
 import mainStyles from "@/styles/mainpage.module.css";
 import styles from "./transcripts.module.css";
@@ -13,6 +13,7 @@ import { DocumentItem, UserDocumentsGetDTO } from "@/types/transcript";
 import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 import {User} from "@/types/user";
 import { marked } from "marked";
+import dayjs from "dayjs";
 
 const TranscriptsPage: React.FC = () => {
     const router = useRouter();
@@ -26,7 +27,31 @@ const TranscriptsPage: React.FC = () => {
     const [items, setItems] = useState<DocumentItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [me, setMe] = useState<User | null>(null);
+    const [itemType, setItemType] = useState<"all" | "transcript" | "note">("all");
+    const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+    const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([null, null]);
+    const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
+    const hasActiveFilters = itemType !== "all" || sortOrder !== "newest" || dateRange[0] !== null;
+
+    const filteredAndSortedItems = items
+        .filter(item => {
+            if (itemType === "all") return true;
+            return item.kind === itemType;})
+
+        .filter(item => {
+            const [startDate, endDate] = dateRange;
+            if (!startDate || !endDate) return true;
+            const itemDate = dayjs(item.createdAt);
+            if (itemDate.isBefore(startDate.startOf("day"))) return false;
+            if (itemDate.isAfter(endDate.endOf("day"))) return false;
+            return true;})
+
+        .sort((a, b) => {
+            if (sortOrder === "newest") {
+                return b.createdAt.localeCompare(a.createdAt);
+            } else {
+                return a.createdAt.localeCompare(b.createdAt);}});
     useEffect(() => {
         if (!isReady) return;
         if (!token) {
@@ -52,13 +77,6 @@ const TranscriptsPage: React.FC = () => {
 
         fetchDocuments();
     }, [isReady, token, id, router, apiService]);
-
-    const handleLogout = (): void => {
-        apiService.put("/users/logout", null, token);
-        clearToken();
-        clearId();
-        router.push("/");
-    };
 
     const handleDownload = (item: DocumentItem) => {
         const date = item.createdAt.slice(0, 10);
@@ -199,7 +217,41 @@ ${rendered}
                     Back
                 </Button>
                 <div className={mainStyles.mainContent}>
-                <h1 className={styles.pageTitle}>Available Transcripts &amp; Notes</h1>
+                    <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32}}>
+                        <h1 className={styles.pageTitle} style={{margin: 0}}>Available Transcripts &amp; Notes</h1>
+                        <Badge dot={hasActiveFilters} color="#6d28d9">
+                            <Button icon={<FilterOutlined/>} onClick={() => setIsFilterMenuOpen(true)}>Filter</Button>
+                        </Badge>
+                    </div>
+
+                    <Drawer title="Filter & Sort" placement="right" open={isFilterMenuOpen} onClose={() => setIsFilterMenuOpen(false)} width={260}>
+                        <div style={{marginBottom: 8, fontSize: 12, fontWeight: 700, color: "#6d28d9", textTransform: "uppercase", letterSpacing: "0.05em"}}>Type</div>
+                        <Radio.Group value={itemType} onChange={e => setItemType(e.target.value)} style={{display: "flex", flexDirection: "column", gap: 8, marginBottom: 24}}>
+                            <Radio value="all">All</Radio>
+                            <Radio value="transcript">Transcripts</Radio>
+                            <Radio value="note">Notes</Radio>
+                        </Radio.Group>
+
+                        <div style={{marginBottom: 8, fontSize: 12, fontWeight: 700, color: "#6d28d9", textTransform: "uppercase", letterSpacing: "0.05em"}}>Date Range</div>
+                        <DatePicker.RangePicker
+                            value={dateRange[0] && dateRange[1] ? [dateRange[0], dateRange[1]] : null}
+                            onChange={val => setDateRange(val ? [val[0], val[1]] : [null, null])}
+                            style={{width: "100%", marginBottom: 24}}
+                            size="small"
+                        />
+
+                        <div style={{marginBottom: 8, fontSize: 12, fontWeight: 700, color: "#6d28d9", textTransform: "uppercase", letterSpacing: "0.05em"}}>Sort</div>
+                        <Radio.Group value={sortOrder} onChange={e => setSortOrder(e.target.value)} style={{display: "flex", flexDirection: "column", gap: 8, marginBottom: 24}}>
+                            <Radio value="newest">Newest</Radio>
+                            <Radio value="oldest">Oldest</Radio>
+                        </Radio.Group>
+
+                        {hasActiveFilters && (
+                            <Button style={{width: "100%"}} onClick={() => { setItemType("all"); setSortOrder("newest"); setDateRange([null, null]); }}>
+                                Reset
+                            </Button>
+                        )}
+                    </Drawer>
 
                 {items.length === 0 ? (
                     <div className={styles.emptyState}>
@@ -209,7 +261,7 @@ ${rendered}
                     </div>
                 ) : (
                     <div className={styles.grid}>
-                        {items.map((item) => (
+                        {filteredAndSortedItems.map((item) => (
                             <div key={`${item.kind}-${item.id}`} className={styles.card}>
                                 <button
                                     className={styles.deleteBtn}
@@ -303,11 +355,11 @@ ${rendered}
                                     Download
                                 </Button>
                             </div>
-                        ))}
-                    </div>
-                )}
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
         </div>
     );
 };
