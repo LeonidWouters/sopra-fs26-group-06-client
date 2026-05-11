@@ -11,8 +11,7 @@ import {User} from "@/types/user";
 import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
 import {
-    AudioMutedOutlined, AudioOutlined, CloseCircleOutlined, CommentOutlined, DownloadOutlined,
-    PaperClipOutlined, SettingOutlined
+    AudioMutedOutlined, AudioOutlined, CloseCircleOutlined, CommentOutlined, DownloadOutlined, SettingOutlined
 } from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
 import JSZip from "jszip";
@@ -113,8 +112,7 @@ const RoomPage: React.FC = () => {
     const [lang,setLang] = useState<string>("English");
     const [accent,setAccent] = useState<string[]>(langs[6][1]);
     const [currentAccent,setCurrentAccent] = useState<string>(accent[0]);
-    const langRef = useRef<string>(accent[0])
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const langRef = useRef<string>(accent[0]);
 
 
 
@@ -122,9 +120,6 @@ const RoomPage: React.FC = () => {
         message: string;
         client: boolean; //handle local vs remote messages
         timestamp: string;
-        isFile?: boolean;
-        fileData?: string;
-        fileName?: string;
     }
 
     const leaveRoom = async (): Promise<void> => {
@@ -175,38 +170,13 @@ const RoomPage: React.FC = () => {
         const date = new Date().toISOString().slice(0, 10);
         const zip = new JSZip();
         zip.file(`transcript_${date}.txt`, downloadDataRef.current.transcript);
-
-        const rendered = marked.parse(downloadDataRef.current.notes, { gfm: true, breaks: false }) as string;
-        const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Notes — ${date}</title>
-<style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 800px; margin: 40px auto; padding: 24px; line-height: 1.7; color: #1a1a1a; }
-  h1, h2, h3 { color: #6B21D6; }
-  h1 { margin-top: 0; }
-  hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
-  pre { background: #f4f4f5; padding: 12px 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
-  code { background: #f4f4f5; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.9em; }
-  pre code { background: transparent; padding: 0; }
-  table { border-collapse: collapse; margin: 12px 0; }
-  th, td { border: 1px solid #d1d5db; padding: 8px 12px; }
-  th { background: #f4f4f5; font-weight: 600; }
-  blockquote { border-left: 4px solid #c4b5fd; margin: 12px 0; padding: 4px 16px; color: #4b5563; }
-</style>
-</head>
-<body>
-<h1>Notes — ${date}</h1>
-<hr>
-${rendered}
-</body>
-</html>`;
-        zip.file(`notes_${date}.html`, html);
-
+        zip.file(`notes_${date}.html`, downloadDataRef.current.notes);
         const zipBlob = await zip.generateAsync({type: "blob"});
         const downloadUrl = URL.createObjectURL(zipBlob);
-        handleFileDownload(downloadUrl, `CommunicALL_${date}.zip`);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = downloadUrl;
+        downloadLink.download = `CommunicALL_${date}.zip`;
+        downloadLink.click();
         URL.revokeObjectURL(downloadUrl);
         setShowDownloadModal(false);
         router.push("/mainpage");
@@ -397,9 +367,6 @@ ${rendered}
                 }
             }
 
-            if (message.type === "file-share") {
-                setMessages((messages) => [...messages, message.content]);
-            }
 
             if (message.type === "speech-to-text") {
                 setSubtitleText(message.content);
@@ -452,42 +419,6 @@ ${rendered}
         setChatHistory(false);
     }
 
-    const handleFileDownload = (fileData: string, fileName: string) => {
-        const downloadlink = document.createElement("a");
-        downloadlink.href = fileData;
-        downloadlink.download = fileName;
-        downloadlink.click();
-    };
-
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const fileReader = new FileReader();
-        fileReader.onload = () => {
-            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            const localMessage: textMsg = {
-                message: file.name,
-                client: true,
-                timestamp,
-                isFile: true,
-                fileData: fileReader.result as string,
-                fileName: file.name};
-
-            const remoteMessage: textMsg = {
-                message: file.name,
-                client: false,
-                timestamp,
-                isFile: true,
-                fileData: fileReader.result as string,
-                fileName: file.name
-            };
-            wsRef.current?.send(JSON.stringify({ type: "file-share", content: remoteMessage }));
-            setMessages((messages) => [...messages, localMessage]);};
-
-        fileReader.readAsDataURL(file);
-        e.target.value = "";
-    };
 
     const setupPeerConnection = () => {
 
@@ -953,8 +884,6 @@ ${rendered}
                             <Space size={"small"} align={"center"}>
                                 <div style={{display: "flex", alignItems: "center", gap: 12, flex: 1}}>
                                     <Button size="large" onClick={chatHistory ? closeChat : loadChat} style={{borderRadius: 5, whiteSpace: "nowrap", backgroundColor: "#e0ccf5"}} icon={<CommentOutlined/>}/>
-                                    <input type="file" ref={fileInputRef} style={{display: "none"}} onChange={handleFileSelect}/>
-                                    <Button size="large" title="Attach file" onClick={() => fileInputRef.current?.click()} style={{borderRadius: 5, backgroundColor: "#e0ccf5"}} icon={<PaperClipOutlined/>}/>
 
                                     <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1}}>
                                         <Form.Item name="message" style={{flex: 1, width: "100%"}} hidden={!chat}>
@@ -1032,18 +961,13 @@ ${rendered}
                             </div>
                             <div style={{flex: 1, overflowY: "auto", padding: 12}}>
                                 {messages.map((msg, index) => {
-                                    const senderName = msg.client ? myUsername : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner");
+                                    const senderName = msg.client 
+                                        ? myUsername 
+                                        : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner");
+                                    
                                     return (
                                         <div key={index} style={{padding: "8px 12px", marginBottom: 8, backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: 8, color: "white"}}>
-                                            {msg.isFile ? (
-                                                <div style={{display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap"}}>
-                                                    <PaperClipOutlined/>
-                                                    <span style={{flex: 1, minWidth: 0, wordBreak: "break-word"}}>{msg.timestamp + ", " + senderName + " shared: " + msg.fileName}</span>
-                                                    <Button size="small" icon={<DownloadOutlined/>} onClick={() => handleFileDownload(msg.fileData!, msg.fileName!)}>Download</Button>
-                                                </div>
-                                            ) : (
-                                                msg.timestamp + ", " + senderName + " : " + msg.message
-                                            )}
+                                            {msg.timestamp + ", " + senderName + " : " + msg.message}
                                         </div>
                                     );
                                 })}
