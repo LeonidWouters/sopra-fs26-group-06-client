@@ -886,7 +886,7 @@ const RoomPage: React.FC = () => {
                                     <Button size="large" onClick={chatHistory ? closeChat : loadChat} style={{borderRadius: 5, whiteSpace: "nowrap", backgroundColor: "#e0ccf5"}} icon={<CommentOutlined/>}/>
 
                                     <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1}}>
-                                        <Form.Item name="message" style={{flex: 1, width: "100%"}} hidden={!chat}>
+                                        <Form.Item name="message" style={{flex: 1, width: "100%"}}>
                                             <Input placeholder="Send a message…" style={{borderRadius: 8}}/>
                                         </Form.Item>
                                     </Form>
