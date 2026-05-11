@@ -8,7 +8,7 @@ import useLocalStorage from "@/hooks/useLocalStorage";
 import {useAuth} from "@/hooks/useAuth";
 import mainStyles from "@/styles/mainpage.module.css";
 import profileStyles from "@/styles/profile.module.css";
-import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined, CameraOutlined, CalendarOutlined,PhoneOutlined} from "@ant-design/icons";
+import {LogoutOutlined, AppstoreOutlined, TeamOutlined, ArrowLeftOutlined, FileTextOutlined, CameraOutlined, CalendarOutlined,PhoneOutlined,EditOutlined} from "@ant-design/icons";
 import {getAvatarColor, getAvatarInitials} from "@/utils/avatarColor";
 import Image from "next/image";
 import {PasswordInput} from "antd-password-input-strength";
