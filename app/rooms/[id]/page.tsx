@@ -2,7 +2,7 @@
 
 import React, {useEffect, useRef, useState} from 'react';
 import {useParams, useRouter} from 'next/navigation';
-import {Button, Form, Input, Modal, notification, Segmented, Select, Slider, Space, Spin} from "antd";
+import {Button, Form, Input, Modal, notification, Segmented, Select, Slider, Space, Spin,Drawer} from "antd";
 import {useApi} from "@/hooks/useApi";
 import {useAuth} from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
@@ -12,7 +12,7 @@ import styles from "@/styles/mainpage.module.css";
 import Image from "next/image";
 import {
     AudioMutedOutlined, AudioOutlined, CloseCircleOutlined, CommentOutlined, DownloadOutlined,
-    PaperClipOutlined, SettingOutlined
+    SettingOutlined, SoundOutlined
 } from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
 import JSZip from "jszip";
@@ -114,7 +114,6 @@ const RoomPage: React.FC = () => {
     const [accent,setAccent] = useState<string[]>(langs[6][1]);
     const [currentAccent,setCurrentAccent] = useState<string>(accent[0]);
     const langRef = useRef<string>(accent[0])
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
 
 
@@ -122,9 +121,6 @@ const RoomPage: React.FC = () => {
         message: string;
         client: boolean; //handle local vs remote messages
         timestamp: string;
-        isFile?: boolean;
-        fileData?: string;
-        fileName?: string;
     }
 
     const leaveRoom = async (): Promise<void> => {
@@ -175,38 +171,13 @@ const RoomPage: React.FC = () => {
         const date = new Date().toISOString().slice(0, 10);
         const zip = new JSZip();
         zip.file(`transcript_${date}.txt`, downloadDataRef.current.transcript);
-
-        const rendered = marked.parse(downloadDataRef.current.notes, { gfm: true, breaks: false }) as string;
-        const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Notes — ${date}</title>
-<style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 800px; margin: 40px auto; padding: 24px; line-height: 1.7; color: #1a1a1a; }
-  h1, h2, h3 { color: #6B21D6; }
-  h1 { margin-top: 0; }
-  hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
-  pre { background: #f4f4f5; padding: 12px 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
-  code { background: #f4f4f5; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.9em; }
-  pre code { background: transparent; padding: 0; }
-  table { border-collapse: collapse; margin: 12px 0; }
-  th, td { border: 1px solid #d1d5db; padding: 8px 12px; }
-  th { background: #f4f4f5; font-weight: 600; }
-  blockquote { border-left: 4px solid #c4b5fd; margin: 12px 0; padding: 4px 16px; color: #4b5563; }
-</style>
-</head>
-<body>
-<h1>Notes — ${date}</h1>
-<hr>
-${rendered}
-</body>
-</html>`;
-        zip.file(`notes_${date}.html`, html);
-
+        zip.file(`notes_${date}.md`, downloadDataRef.current.notes);
         const zipBlob = await zip.generateAsync({type: "blob"});
         const downloadUrl = URL.createObjectURL(zipBlob);
-        handleFileDownload(downloadUrl, `CommunicALL_${date}.zip`);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = downloadUrl;
+        downloadLink.download = `CommunicALL_${date}.zip`;
+        downloadLink.click();
         URL.revokeObjectURL(downloadUrl);
         setShowDownloadModal(false);
         router.push("/mainpage");
@@ -397,10 +368,6 @@ ${rendered}
                 }
             }
 
-            if (message.type === "file-share") {
-                setMessages((messages) => [...messages, message.content]);
-            }
-
             if (message.type === "speech-to-text") {
                 setSubtitleText(message.content);
             }
@@ -452,42 +419,6 @@ ${rendered}
         setChatHistory(false);
     }
 
-    const handleFileDownload = (fileData: string, fileName: string) => {
-        const downloadlink = document.createElement("a");
-        downloadlink.href = fileData;
-        downloadlink.download = fileName;
-        downloadlink.click();
-    };
-
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const fileReader = new FileReader();
-        fileReader.onload = () => {
-            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            const localMessage: textMsg = {
-                message: file.name,
-                client: true,
-                timestamp,
-                isFile: true,
-                fileData: fileReader.result as string,
-                fileName: file.name};
-
-            const remoteMessage: textMsg = {
-                message: file.name,
-                client: false,
-                timestamp,
-                isFile: true,
-                fileData: fileReader.result as string,
-                fileName: file.name
-            };
-            wsRef.current?.send(JSON.stringify({ type: "file-share", content: remoteMessage }));
-            setMessages((messages) => [...messages, localMessage]);};
-
-        fileReader.readAsDataURL(file);
-        e.target.value = "";
-    };
 
     const setupPeerConnection = () => {
 
@@ -949,12 +880,12 @@ ${rendered}
                             )}
                         </div>
 
-                        <div style={{padding: "10px 24px", borderTop: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "#ffffff"}}>
-                            <Space size={"small"} align={"center"}>
-                                <div style={{display: "flex", alignItems: "center", gap: 12, flex: 1}}>
-                                    <Button size="large" onClick={chatHistory ? closeChat : loadChat} style={{borderRadius: 5, whiteSpace: "nowrap", backgroundColor: "#e0ccf5"}} icon={<CommentOutlined/>}/>
-                                    <input type="file" ref={fileInputRef} style={{display: "none"}} onChange={handleFileSelect}/>
-                                    <Button size="large" title="Attach file" onClick={() => fileInputRef.current?.click()} style={{borderRadius: 5, backgroundColor: "#e0ccf5"}} icon={<PaperClipOutlined/>}/>
+                    <div style={{padding: "10px 24px", borderTop: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "#ffffff"}}>
+                        {/* Left: chat */}
+                        <Space size={"small"} align={"center"}>
+                        <div style={{display: "flex", alignItems: "center",gap:12, flex: 1}}>
+                            <Button size="large" onClick={loadChat} style={{borderRadius: 5, whiteSpace: "nowrap", backgroundColor:"#e0ccf5"}} icon={<CommentOutlined/>}>
+                            </Button>
 
                                     <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1}}>
                                         <Form.Item name="message" style={{flex: 1, width: "100%"}} hidden={!chat}>
@@ -964,44 +895,45 @@ ${rendered}
                                 </div>
                             </Space>
 
-                            <Space size="middle" align="center">
-                                <div style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 16,
-                                    background: "#f0ebfa",
-                                    borderRadius: 20,
-                                    padding: "6px 18px",
-                                }}>
-                                    <Button
-                                        shape="circle"
-                                        size="large"
-                                        icon={isMuted ? <AudioMutedOutlined/> : <AudioOutlined/>}
-                                        onClick={toggleMute}
-                                        style={{backgroundColor: isMuted ? "#ef4444" : "#6B21D6", color: "white", border: "none", width: 44, height: 44}}
+                        {/* Center: mute + volume */}
+                        <Space size="middle" align="center">
+                        <div style={{display: "flex", alignItems: "center", gap: 16, background: "#FFFFFF", borderRadius: 20, padding: 7}}>
+                            <Button
+                                shape="circle"
+                                size="large"
+                                icon={isMuted ? <AudioMutedOutlined/> : <AudioOutlined/>}
+                                onClick={toggleMute}
+                                style={{backgroundColor: isMuted ? "#ef4444" : "#6B21D6", color: "white", border: "none", width: 44, height: 44}}
+                            />
+                            <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: 2}}>
+                                <div style={{display: "flex", alignItems: "center", gap: 6}}>
+                                    <span style={{fontSize: 16}}>{volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}</span>
+                                    <input
+                                        type="range"
+                                        min={0}
+                                        max={1}
+                                        step={0.05}
+                                        value={volume}
+                                        onChange={e => {
+                                            const v = parseFloat(e.target.value);
+                                            setVolume(v);
+                                            if (remoteRef.current) remoteRef.current.volume = v;
+                                            localStorage.setItem("callVolume", String(v));
+                                        }}
+                                        style={{width: 90, accentColor: "#6B21D6", cursor: "pointer"}}
                                     />
-                                    <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: 2}}>
-                                        <div style={{display: "flex", alignItems: "center", gap: 6}}>
-                                            <span style={{fontSize: 16}}>{volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}</span>
-                                            <input
-                                                type="range"
-                                                min={0}
-                                                max={1}
-                                                step={0.05}
-                                                value={volume}
-                                                onChange={e => {
-                                                    const v = parseFloat(e.target.value);
-                                                    setVolume(v);
-                                                    if (remoteRef.current) remoteRef.current.volume = v;
-                                                    localStorage.setItem("callVolume", String(v));
-                                                }}
-                                                style={{width: 90, accentColor: "#6B21D6", cursor: "pointer"}}
-                                            />
-                                        </div>
-                                        <span style={{fontSize: 10, color: "#9ca3af"}}>{Math.round(volume * 100)}%</span>
-                                    </div>
                                 </div>
-                            </Space>
+                                <span style={{fontSize: 10, color: "#9ca3af"}}>{Math.round(volume * 100)}%</span>
+                            </div>
+                    </div>
+                        </Space>
+
+                        <Drawer title="Chat History" open={chatHistory} onClose={closeChat} placement="left" mask={false}>
+                            {messages.map((msg, index) => (
+                                <div key={index} style={{padding: "8px 12px", marginBottom: 8, backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: 8, color: "white"}}>
+                                    {msg.timestamp + ", " + (msg.client ? myUsername : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner")) + " : " + msg.message}
+                                </div>))}
+                        </Drawer>
 
                             <Space size="small" align="center">
                                 <Modal title={"Settings"} onCancel={() => closeSettings()} open={showSettingsModal} okText={"Apply"} onOk={() => closeSettings()}>
@@ -1035,15 +967,9 @@ ${rendered}
                                     const senderName = msg.client ? myUsername : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner");
                                     return (
                                         <div key={index} style={{padding: "8px 12px", marginBottom: 8, backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: 8, color: "white"}}>
-                                            {msg.isFile ? (
-                                                <div style={{display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap"}}>
-                                                    <PaperClipOutlined/>
-                                                    <span style={{flex: 1, minWidth: 0, wordBreak: "break-word"}}>{msg.timestamp + ", " + senderName + " shared: " + msg.fileName}</span>
-                                                    <Button size="small" icon={<DownloadOutlined/>} onClick={() => handleFileDownload(msg.fileData!, msg.fileName!)}>Download</Button>
-                                                </div>
-                                            ) : (
+                                            {
                                                 msg.timestamp + ", " + senderName + " : " + msg.message
-                                            )}
+                                            }
                                         </div>
                                     );
                                 })}
