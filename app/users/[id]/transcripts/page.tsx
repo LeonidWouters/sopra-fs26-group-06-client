@@ -185,15 +185,15 @@ ${rendered}
                             <FileTextOutlined/>
                         </div>
                     </Tooltip>
+                    <Tooltip title="Calendar" placement="right">
+                        <div className={mainStyles.sbIcon} onClick={() => router.push(`/users/${loggedInId}/calendar`)}>
+                            <CalendarOutlined/>
+                        </div>
+                    </Tooltip>
                 </div>
                 <div className={mainStyles.sidebarBottom}>
                     <Tooltip title="Sign Out" placement="right">
-                        <div className={mainStyles.sbIcon} onClick={() => {
-                            apiService.put("/users/logout", null, token);
-                            clearToken();
-                            clearId();
-                            router.push("/");
-                        }}>
+                        <div className={mainStyles.sbIcon} onClick={handleLogout}>
                             <LogoutOutlined/>
                         </div>
                     </Tooltip>
