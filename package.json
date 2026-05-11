@@ -16,12 +16,14 @@
     "antd": "^6.0.0",
     "antd-password-input-strength": "^2.0.1",
     "jszip": "^3.10.1",
+    "marked": "^18.0.3",
     "next": "^15.5.7",
     "node-localstorage": "^3.0.5",
     "process": "^0.11.10",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
