@@ -881,15 +881,17 @@ const RoomPage: React.FC = () => {
                         </div>
 
                         <div style={{padding: "10px 24px", borderTop: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "#ffffff"}}>
-                            <Space size={"small"} align={"center"}>
+                            <Space size={"small"} align={"center"} style={{ flex: 1 }}>
                                 <div style={{display: "flex", alignItems: "center", gap: 12, flex: 1}}>
                                     <Button size="large" onClick={chatHistory ? closeChat : loadChat} style={{borderRadius: 5, whiteSpace: "nowrap", backgroundColor: "#e0ccf5"}} icon={<CommentOutlined/>}/>
 
-                                    <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1}}>
-                                        <Form.Item name="message" style={{flex: 1, width: "100%"}}>
-                                            <Input placeholder="Send a message…" style={{borderRadius: 8}}/>
-                                        </Form.Item>
-                                    </Form>
+                                    {!chatHistory && (
+                                        <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1}}>
+                                            <Form.Item name="message" style={{flex: 1, width: "100%", margin: 0}}>
+                                                <Input placeholder="Send a message…" style={{borderRadius: 8}}/>
+                                            </Form.Item>
+                                        </Form>
+                                    )}
                                 </div>
                             </Space>
 
@@ -971,6 +973,13 @@ const RoomPage: React.FC = () => {
                                         </div>
                                     );
                                 })}
+                            </div>
+                            <div style={{padding: "12px", borderTop: "1px solid #e5e7eb"}}>
+                                <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1, display: "flex"}}>
+                                    <Form.Item name="message" style={{flex: 1, margin: 0}}>
+                                        <Input placeholder="Send a message…" style={{borderRadius: 8}}/>
+                                    </Form.Item>
+                                </Form>
                             </div>
                         </aside>
                     )}
