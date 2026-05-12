@@ -966,7 +966,7 @@ const RoomPage: React.FC = () => {
                                         : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner");
                                     
                                     return (
-                                        <div key={index} style={{padding: "8px 12px", marginBottom: 8, backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: 8, color: "white"}}>
+                                        <div key={index} style={{padding: "8px 12px", marginBottom: 8, backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: 8, color: "white", overflowWrap: "anywhere", hyphens: "auto"}}>
                                             {msg.timestamp + ", " + senderName + " : " + msg.message}
                                         </div>
                                     );
