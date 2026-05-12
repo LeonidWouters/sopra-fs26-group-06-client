@@ -321,6 +321,8 @@ ${rendered}
                                         display: "-webkit-box",
                                         WebkitLineClamp: 3,
                                         WebkitBoxOrient: "vertical",
+                                        overflowWrap: "anywhere",
+                                        hyphens: "auto",
                                     }}>
                                         {item.content?.trim() || "No content"}
                                     </div>
