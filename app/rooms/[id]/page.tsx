@@ -304,13 +304,13 @@ const RoomPage: React.FC = () => {
     }
 
     useEffect(() =>{
-        if(!callStarted) return;
+        if(!isReady || !token) return;
         sendHeartbeat(token);
         const interval = setInterval(() => {
             sendHeartbeat(token);
         },15000)
         return () => clearInterval(interval);
-    }, [callStarted]);
+    }, [isReady, token, id]);
 
     useEffect(() => {
         if (!isReady) return;
