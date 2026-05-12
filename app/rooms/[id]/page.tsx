@@ -308,7 +308,7 @@ const RoomPage: React.FC = () => {
         sendHeartbeat(token);
         const interval = setInterval(() => {
             sendHeartbeat(token);
-        },30000)
+        },15000)
         return () => clearInterval(interval);
     }, [callStarted]);
 
