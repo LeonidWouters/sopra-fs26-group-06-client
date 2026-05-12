@@ -1,6 +1,5 @@
 "use client";
-import React, {use, useEffect, useState} from "react";
-import dynamic from "next/dynamic";
+import React, {useEffect, useState} from "react";
 import { useRouter } from "next/navigation";
 import {Button, Modal, Form, Input, DatePicker, Badge, Tooltip, Spin, Select} from "antd";
 import {
@@ -8,7 +7,6 @@ import {
     FileTextOutlined, CalendarOutlined, PlusOutlined,
 } from "@ant-design/icons";
 import Image from "next/image";
-import dayjs from "dayjs";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import mainStyles from "@/styles/mainpage.module.css";
 import styles from "./calendar.module.css";
@@ -17,40 +15,26 @@ import { useAuth } from "@/hooks/useAuth";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import { getAvatarColor, getAvatarInitials } from "@/utils/avatarColor";
 import { User } from "@/types/user";
-
+import { View } from "react-big-calendar";
+import { Calendar, dayjsLocalizer } from "react-big-calendar";
+import dayjs from "dayjs";
 import type { Event as RBCEvent } from "react-big-calendar";
+
+
+
+const djlocalizer = dayjsLocalizer(dayjs);
 
 export interface CalendarEvent extends RBCEvent {
     id: string;
     title: string;
     description?: string;
-    startDate: Date;
-    endDate: Date;
+    start: Date;
+    end: Date;
     color?: string;
     owner : number;
     invitedUser : number;
 }
 
-const BigCalendar = dynamic(
-    () => Promise.all([
-        import("react-big-calendar"),
-        import("dayjs"),
-        ]).then(([mod, { default: dayjs }]) => {
-        const { Calendar, dayjsLocalizer } = mod;
-        const localizer = dayjsLocalizer(dayjs);
-        return function CalendarWrapper(props: Omit<React.ComponentProps<typeof Calendar>, "localizer">) {
-            return <Calendar localizer={localizer} {...props} />;
-        };
-    }),
-    {
-        ssr: false,
-        loading: () => (
-            <div style={{ display: "flex", justifyContent: "center", padding: 64 }}>
-                <Spin size="large" />
-            </div>
-        ),
-    }
-);
 
 interface EventModalProps {
     open: boolean;
@@ -65,7 +49,6 @@ const EventModal: React.FC<EventModalProps> = ({
     open, onClose, existingEvent, initialDate, onSave, onDelete,
 }) => {
     const [friends, setFriends] = useState<User[]>([]);//get friends for invite dropdown
-    const [invitedUserId,setInvitedUserId] = useState<number>(0)
     const [form] = Form.useForm();
     const apiService = useApi();
     const {
@@ -86,13 +69,13 @@ const EventModal: React.FC<EventModalProps> = ({
 
     useEffect(() => {
         if (open) {
-            const startDate = existingEvent?.startDate ?? initialDate ?? new Date();
-            const endDate = existingEvent?.endDate ?? new Date(new Date(startDate).getTime() + 60 * 60 * 1000);
+            const start = existingEvent?.start ?? initialDate ?? new Date();
+            const end = existingEvent?.end ?? new Date(new Date(start).getTime() + 60 * 60 * 1000);
             form.setFieldsValue({
                 title: existingEvent?.title ?? "",
                 description: existingEvent?.description ?? "",
-                startDate: dayjs(startDate),
-                endDate: dayjs(endDate),
+                start: dayjs(start),
+                end: dayjs(end),
             });
         } else {
             form.resetFields();
@@ -101,22 +84,34 @@ const EventModal: React.FC<EventModalProps> = ({
 
     const handleSave = () => {
         form.validateFields().then(values => {
-            onSave({
-                id: existingEvent?.id ?? "",//Id is set in backend and only fetched via GET
+            const payload = {
+                id: "",//set in backend
                 title: values.title,
                 description: values.description ?? "",
-                startDate: values.startDate.toDate(),
-                endDate: values.endDate.toDate(),
+                start: values.start.format("YYYY-MM-DDTHH:mm:ss"),
+                end: values.end.format("YYYY-MM-DDTHH:mm:ss"),
                 color: "#6B21D6",
-                owner : parseInt(id) ,
+                owner : Number(id) ,
                 invitedUser : values.invitedUserId,
+            };
+
+            console.log(payload);
+            console.log(JSON.stringify(payload));
+            const persist = apiService.post(`/meetings/${id}`,payload,token);
+            console.log(persist);
+            onSave({
+                ...payload,
+                start: new Date(payload.start),
+                end: new Date(payload.end),
             });
+
             onClose();
         });
     };
 
     return (
         <Modal
+            forceRender
             title={existingEvent ? "Edit Scheduled Call" : "Schedule a Call"}
             open={open}
             onCancel={onClose}
@@ -141,23 +136,21 @@ const EventModal: React.FC<EventModalProps> = ({
                 <Form.Item label="Description" name="description">
                     <Input.TextArea rows={2} placeholder="Optional notes..." />
                 </Form.Item>
-                <Form.Item label="StartDate" name="startDate"
+                <Form.Item label="start" name="start"
                     rules={[{ required: true, message: "Please pick a start time" }]}>
                     <DatePicker showTime={{ minuteStep: 15 }} format="DD MMM YYYY HH:mm" style={{ width: "100%" }} />
                 </Form.Item>
-                <Form.Item label="EndDate" name="endDate"
+                <Form.Item label="end" name="end"
                     rules={[{ required: true, message: "Please pick an end time" }]}>
                     <DatePicker showTime={{ minuteStep: 15 }} format="DD MMM YYYY HH:mm" style={{ width: "100%" }} />
                 </Form.Item>
                 <Form.Item label="Invite Friend" name="invitedUserId" rules={[{ required: true, message: "Please pick a user to invite" }]}>
                     <Select
                         placeholder="Select a friend to invite"
-                        value={invitedUserId}
-                        onChange={value => setInvitedUserId(value)}
                         style={{width: "100%"}}
                     >
                         {friends.map(friend => (
-                            <Select.Option key={friend.id} value={friend.username}>
+                            <Select.Option key={friend.id} value={friend.id}>
                                 {friend.name} (@{friend.username})
                             </Select.Option>
                         ))}
@@ -175,12 +168,13 @@ const CalendarPage: React.FC = () => {
     const { value: loggedInId } = useLocalStorage<string>("id", "");
     const { clear: clearToken } = useLocalStorage<string>("token", "");
     const { clear: clearId } = useLocalStorage<string>("id", "");
-
     const [me, setMe] = useState<User | null>(null);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [modalOpen, setModalOpen] = useState(false);
     const [modalEvent, setModalEvent] = useState<CalendarEvent | null>(null);
     const [modalInitialDate, setModalInitialDate] = useState<Date | undefined>(undefined);
+    const [currentView, setCurrentView] = useState<View>('week');
+    const [currentDate, setCurrentDate] = useState<Date | undefined>(undefined);
 
     useEffect(() => {
         if (!isReady) return;
@@ -189,6 +183,15 @@ const CalendarPage: React.FC = () => {
             try {
                 const fetchedMe = await apiService.get<User>(`/users/${loggedInId}`, token);
                 setMe(fetchedMe);
+                const meetings = await apiService.get<CalendarEvent[]>(`/meetings/${fetchedMe.id}`, token);
+
+                const normalizedMeetings = meetings.map(meeting => ({
+                    ...meeting,
+                    start: new Date(meeting.start),
+                    end: new Date(meeting.end),
+                }));
+                setEvents(normalizedMeetings);
+                console.log(normalizedMeetings);
             } catch (e) { console.error(e); }
         };
         load();
@@ -202,6 +205,7 @@ const CalendarPage: React.FC = () => {
     };
 
     const handleDelete = (id: string) => {
+        apiService.delete(`/meetings/${id}`, token);
         setEvents(prev => prev.filter(e => e.id !== id));
     };
 
@@ -294,16 +298,21 @@ const CalendarPage: React.FC = () => {
                         </Button>
                     </div>
                     <div className={styles.calendarWrapper}>
-                        <BigCalendar
+                        <Calendar
+                            localizer={djlocalizer}
                             events={events}
-                            defaultView="week"
-                            views={["month", "week", "day", "agenda"]}
+                            onView={setCurrentView}
+                            view={currentView}
+                            date={currentDate}
+                            onNavigate={date => {
+                                setCurrentDate(date);
+                            }}
                             step={30}
                             timeslots={2}
-                            startAccessor={(e) => (e as CalendarEvent).startDate}
-                            endAccessor={(e) => (e as CalendarEvent).endDate}
-                            titleAccessor={(e) => (e as CalendarEvent).title}
-                            style={{ height: "100%" }}
+                            startAccessor="start"
+                            endAccessor="end"
+                            titleAccessor="title"
+                            style={{ height: 700 }}
                             onSelectEvent={(e) => openEdit(e as CalendarEvent)}
                             onSelectSlot={(slot: { start: Date }) => openCreate(slot.start)}
                             selectable
