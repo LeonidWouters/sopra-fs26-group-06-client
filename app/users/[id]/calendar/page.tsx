@@ -76,31 +76,37 @@ const EventModal: React.FC<EventModalProps> = ({
                 description: existingEvent?.description ?? "",
                 start: dayjs(start),
                 end: dayjs(end),
+                invitedUser: existingEvent?.invitedUser  ?? undefined,
             });
         } else {
             form.resetFields();
         }
-    }, [open, existingEvent, initialDate, form]);
+    }, [open, existingEvent, initialDate, form,friends]);
 
     const handleSave = () => {
-        form.validateFields().then(values => {
+        form.validateFields().then(async values => {
             const payload = {
-                id: "",//set in backend
+                id: existingEvent?.id || "",//set in backend
                 title: values.title,
                 description: values.description ?? "",
                 start: values.start.format("YYYY-MM-DDTHH:mm:ss"),
                 end: values.end.format("YYYY-MM-DDTHH:mm:ss"),
                 color: "#6B21D6",
                 owner : Number(id) ,
-                invitedUser : values.invitedUserId,
+                invitedUser : existingEvent?.invitedUser || values.invitedUser,
             };
+            if(existingEvent){
+                const updatedMeeting:CalendarEvent = await apiService.put(`/meetings/${id}`,payload,token);
+                payload.id = updatedMeeting.id;
+            }
+            else{
+                const savedMeeting:CalendarEvent = await apiService.post(`/meetings/${id}`,payload,token);
+                payload.id = savedMeeting.id;
+            }
 
-            console.log(payload);
-            console.log(JSON.stringify(payload));
-            const persist = apiService.post(`/meetings/${id}`,payload,token);
-            console.log(persist);
             onSave({
                 ...payload,
+
                 start: new Date(payload.start),
                 end: new Date(payload.end),
             });
@@ -116,7 +122,7 @@ const EventModal: React.FC<EventModalProps> = ({
             open={open}
             onCancel={onClose}
             footer={[
-                existingEvent && onDelete ? (
+                existingEvent && existingEvent.owner===Number(id) && onDelete ? (
                     <Button key="del" danger onClick={() => { onDelete!(existingEvent.id); onClose(); }}>
                         Delete
                     </Button>
@@ -144,7 +150,7 @@ const EventModal: React.FC<EventModalProps> = ({
                     rules={[{ required: true, message: "Please pick an end time" }]}>
                     <DatePicker showTime={{ minuteStep: 15 }} format="DD MMM YYYY HH:mm" style={{ width: "100%" }} />
                 </Form.Item>
-                <Form.Item label="Invite Friend" name="invitedUserId" rules={[{ required: true, message: "Please pick a user to invite" }]}>
+                <Form.Item hidden={!(existingEvent && existingEvent?.owner === Number(id))} /*checks ownership status*/ label="Invite Friend" name="invitedUser" rules={[{ required: true, message: "Please pick a user to invite" }]}>
                     <Select
                         placeholder="Select a friend to invite"
                         style={{width: "100%"}}
@@ -205,7 +211,11 @@ const CalendarPage: React.FC = () => {
     };
 
     const handleDelete = (id: string) => {
-        apiService.delete(`/meetings/${id}`, token);
+        try {
+            apiService.delete(`/meetings/${id}/${loggedInId}`, token);
+        }
+        catch (e) { console.error(e); }
+
         setEvents(prev => prev.filter(e => e.id !== id));
     };
 
@@ -312,7 +322,7 @@ const CalendarPage: React.FC = () => {
                             startAccessor="start"
                             endAccessor="end"
                             titleAccessor="title"
-                            style={{ height: 700 }}
+                            style={{ height: "100%" }}
                             onSelectEvent={(e) => openEdit(e as CalendarEvent)}
                             onSelectSlot={(slot: { start: Date }) => openCreate(slot.start)}
                             selectable
