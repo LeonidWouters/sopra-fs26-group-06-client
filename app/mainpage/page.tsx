@@ -235,7 +235,7 @@ const HomePage: React.FC = () => {
                 </div>
                 <div className={styles.sidebarBottom}>
                     <Tooltip title="Sign Out" placement="right">
-                        <div className={styles.sbIcon} onClick={handleLogout}>
+                        <div className={`${styles.sbIcon} ${styles.sbIconLogout}`} onClick={handleLogout}>
                             <LogoutOutlined/>
                         </div>
                     </Tooltip>
@@ -276,7 +276,7 @@ const HomePage: React.FC = () => {
                     <span className={styles.statSep}>·</span>
                     <span className={styles.statItem}>
                         <span className={styles.statDot} style={{background: "#6B21D6"}}/>
-                        {users.filter(u => u.status === "ONLINE").length} users online
+                        {users.filter(u => u.status === "ONLINE").length} user(s) online
                     </span>
                 </div>
 
