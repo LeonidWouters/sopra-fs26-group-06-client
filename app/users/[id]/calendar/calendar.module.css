@@ -24,7 +24,7 @@
 
 /* Override react-big-calendar styles to match lavender theme */
 .calendarWrapper :global(.rbc-calendar) {
-    height: 100%;
+    height: 80%;
     font-family: inherit;
     color: #111827;
 }
