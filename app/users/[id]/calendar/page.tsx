@@ -272,7 +272,7 @@ const CalendarPage: React.FC = () => {
                 </div>
                 <div className={mainStyles.sidebarBottom}>
                     <Tooltip title="Sign Out" placement="right">
-                        <div className={mainStyles.sbIcon} onClick={() => {
+                        <div className={`${mainStyles.sbIcon} ${mainStyles.sbIconLogout}`} onClick={() => {
                             apiService.put("/users/logout", null, token);
                             clearToken();
                             clearId();

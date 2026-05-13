@@ -58,6 +58,7 @@
     transition: background 0.15s, color 0.15s;
 }
 
+
 .sbIcon:hover {
     background: #f3f4f6;
     color: #374151;
@@ -71,6 +72,15 @@
 .sbIconActive:hover {
     background: #ddd6fe;
     color: #5b21b6;
+}
+
+.sbIconLogout {
+    color: #dc2626;
+}
+
+.sbIconLogout:hover {
+    background: #fee2e2;
+    color: #b91c1c;
 }
 
 .sbAvatar {
@@ -171,8 +181,11 @@
     font-size: 13px;
     font-weight: 500;
     color: #6b21d6;
+    margin-top: 12px;
     margin-bottom: 16px;
     backdrop-filter: blur(8px);
+    width: 100%;
+    max-width: 480px;
 }
 
 .statItem {
