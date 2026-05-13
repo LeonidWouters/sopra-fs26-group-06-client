@@ -593,31 +593,32 @@ const RoomPage: React.FC = () => {
         }
 
         speechRef.current.onerror = (event) => {
-            console.log(event.error);
-            const recoverable: string[] = ["no-speech","aborted","network"];
-            const restart : string[] = ["not-allowed","service-not-allowed"]
-            if(recoverable.includes(event.error)) {
-                setTimeout(() => speechRef.current?.start(), 500);
+            console.log("Speech recognition error:", event.error);
+            const recoverable = ["no-speech", "aborted", "network"];
+            const blocked = ["not-allowed", "service-not-allowed"];
+
+            if (recoverable.includes(event.error)) {
+                setTimeout(() => {
+                    try { speechRef.current?.start(); }
+                    catch (e) { }
+                }, 500);
+                return;
             }
-            if(restart.includes(event.error)){
+
+            if (blocked.includes(event.error)) {
                 speechRef.current = null;
-                if(event.error === "not-allowed" || "service-not-allowed"){
-                    console.log("user or browser blocked microphone access, retrying...")
-                    navigator.mediaDevices.getUserMedia({audio: true}).then(() => {
-                        startSTT();
-                    }).catch((error) => {
-                        console.log("Couldn't access microphone, starting text to text",error);
+                console.log("Microphone access blocked, retrying...");
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(() => startSTT())
+                    .catch((error) => {
+                        console.log("Couldn't access microphone, starting text-to-text", error);
                         startTTT();
                     });
-                }
+                return;
             }
-            else {
-                console.log(event.error);
-                speechRef.current = null;
-                startSTT();
-            }
+            speechRef.current = null;
+            startSTT();
         }
-
     }
 
 
