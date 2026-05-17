@@ -133,9 +133,9 @@ const Login: React.FC = () => {
                 <Image
                     src="/unnamed-Photoroom.png"
                     alt="ComunicALL"
-                    width={180}
-                    height={50}
-                    style={{width: "auto", maxWidth: "180px", height: "auto", maxHeight: "50px"}}
+                    width={200}
+                    height={70}
+                    style={{width: "auto", maxWidth: "200px", height: "auto", maxHeight: "70px", marginBottom: "33px"}}
                 />
                 <h1>Accessible calls,<br/>for everyone.</h1>
                 <p>Real-time subtitles, shared notes and transcripts — built for deaf and hearing users.</p>
@@ -158,6 +158,13 @@ const Login: React.FC = () => {
                     <div className="login-feature-text">
                         <strong>Auto transcripts</strong>
                         <span>Every call saved and downloadable</span>
+                    </div>
+                </div>
+                <div className="login-feature">
+                    <div className="login-feature-icon">📅</div>
+                    <div className="login-feature-text">
+                        <strong>Smart scheduling</strong>
+                        <span>Plan calls with friends ahead of time</span>
                     </div>
                 </div>
                 <div className="login-left-footer">sopra-fs26 · group 06</div>
