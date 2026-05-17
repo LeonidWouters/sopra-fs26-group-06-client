@@ -51,7 +51,15 @@ a {
 
 .login-left-panel {
     flex: 1;
-    background: linear-gradient(135deg, #3b0764 0%, #6B21D6 100%);
+    background: linear-gradient(
+            180deg,
+            #f5f3ff 0%,
+            #ddd6fe 10%,
+            #a78bfa 20%,
+            #7c3aed 32%,
+            #5b21b6 65%,
+            #2e1065 100%
+    );
     display: flex;
     flex-direction: column;
     justify-content: center;

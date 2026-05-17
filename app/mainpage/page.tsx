@@ -367,11 +367,10 @@ const HomePage: React.FC = () => {
                                     bordered={false}
                                     styles={{
                                         header: {
-                                            backgroundColor: 'rgba(44, 44, 84, 0.60)',
-                                            borderBottom: '1px solid rgba(255,255,255,0.12)',
-                                            backdropFilter: 'blur(8px)',
+                                            backgroundColor: 'rgba(44, 44, 84, 0.95)',
+                                            borderBottom: '1px solid rgba(255,255,255,0.1)'
                                         },
-                                        body: {backgroundColor: 'rgba(64, 64, 122, 0.50)', backdropFilter: 'blur(8px)'}
+                                        body: {backgroundColor: 'rgba(64, 64, 122, 0.85)'}
                                     }}
                                 >
                                     <Paragraph style={{color: '#e2e8f0'}}>{room.description}</Paragraph>
