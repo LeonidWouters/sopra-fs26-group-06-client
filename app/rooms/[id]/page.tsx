@@ -15,8 +15,6 @@ import {
 } from "@ant-design/icons";
 import {getApiDomain} from "@/utils/domain";
 import JSZip from "jszip";
-import { marked } from "marked";
-
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), {ssr: false});
 
@@ -145,7 +143,7 @@ const RoomPage: React.FC = () => {
                 },token)
                 console.log(messages);
             }
-            catch (error) {                console.error("Couldnt save transcript:", error);
+            catch (error) {console.error("Couldnt save transcript:", error);
             }
         }
 
@@ -937,9 +935,10 @@ const RoomPage: React.FC = () => {
 
                             <Space size="small" align="center">
                                 <Modal title={"Settings"} onCancel={() => closeSettings()} open={showSettingsModal} okText={"Apply"} onOk={() => closeSettings()}>
-                                    <h4>Subtitle Size</h4>
-                                    <p style={{fontSize : subtitleSize, alignContent:"center"}}>Example Text</p>
-                                    <Slider style={{width: "50%"}} defaultValue={16} min={8} max={40} onChange={(value) => setSubtitleSize(value.toString()+"px")}></Slider>
+                                    {ttsEnabledBool && (<><h4>Subtitle Size</h4><p
+                                        style={{fontSize: subtitleSize, alignContent: "center"}}>Example Text</p><Slider
+                                        style={{width: "50%"}} defaultValue={16} min={8} max={40}
+                                        onChange={(value) => setSubtitleSize(value.toString() + "px")}></Slider></>)}
                                     {ttsEnabledBool && (<>
                                         <h4 style={{marginTop: 16}}>Voice</h4>
                                         <Select style={{width: "100%"}} defaultValue={0} onChange={(index) => chooseVoice(index)} options={window.speechSynthesis.getVoices().map((voice, index) => ({label: voice.name, value: index}))}/>
