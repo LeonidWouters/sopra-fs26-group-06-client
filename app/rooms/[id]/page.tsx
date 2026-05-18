@@ -304,13 +304,13 @@ const RoomPage: React.FC = () => {
     }
 
     useEffect(() =>{
-        if(!callStarted) return;
+        if(!isReady || !token) return;
         sendHeartbeat(token);
         const interval = setInterval(() => {
             sendHeartbeat(token);
-        },30000)
+        },15000)
         return () => clearInterval(interval);
-    }, [callStarted]);
+    }, [isReady, token, id]);
 
     useEffect(() => {
         if (!isReady) return;
@@ -593,31 +593,32 @@ const RoomPage: React.FC = () => {
         }
 
         speechRef.current.onerror = (event) => {
-            console.log(event.error);
-            const recoverable: string[] = ["no-speech","aborted","network"];
-            const restart : string[] = ["not-allowed","service-not-allowed"]
-            if(recoverable.includes(event.error)) {
-                setTimeout(() => speechRef.current?.start(), 500);
+            console.log("Speech recognition error:", event.error);
+            const recoverable = ["no-speech", "aborted", "network"];
+            const blocked = ["not-allowed", "service-not-allowed"];
+
+            if (recoverable.includes(event.error)) {
+                setTimeout(() => {
+                    try { speechRef.current?.start(); }
+                    catch (e) { }
+                }, 500);
+                return;
             }
-            if(restart.includes(event.error)){
+
+            if (blocked.includes(event.error)) {
                 speechRef.current = null;
-                if(event.error === "not-allowed" || "service-not-allowed"){
-                    console.log("user or browser blocked microphone access, retrying...")
-                    navigator.mediaDevices.getUserMedia({audio: true}).then(() => {
-                        startSTT();
-                    }).catch((error) => {
-                        console.log("Couldn't access microphone, starting text to text",error);
+                console.log("Microphone access blocked, retrying...");
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(() => startSTT())
+                    .catch((error) => {
+                        console.log("Couldn't access microphone, starting text-to-text", error);
                         startTTT();
                     });
-                }
+                return;
             }
-            else {
-                console.log(event.error);
-                speechRef.current = null;
-                startSTT();
-            }
+            speechRef.current = null;
+            startSTT();
         }
-
     }
 
 
@@ -881,15 +882,17 @@ const RoomPage: React.FC = () => {
                         </div>
 
                         <div style={{padding: "10px 24px", borderTop: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "#ffffff"}}>
-                            <Space size={"small"} align={"center"}>
+                            <Space size={"small"} align={"center"} style={{ flex: 1 }}>
                                 <div style={{display: "flex", alignItems: "center", gap: 12, flex: 1}}>
                                     <Button size="large" onClick={chatHistory ? closeChat : loadChat} style={{borderRadius: 5, whiteSpace: "nowrap", backgroundColor: "#e0ccf5"}} icon={<CommentOutlined/>}/>
 
-                                    <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1}}>
-                                        <Form.Item name="message" style={{flex: 1, width: "100%"}}>
-                                            <Input placeholder="Send a message…" style={{borderRadius: 8}}/>
-                                        </Form.Item>
-                                    </Form>
+                                    {!chatHistory && (
+                                        <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1}}>
+                                            <Form.Item name="message" style={{flex: 1, width: "100%", margin: 0}}>
+                                                <Input placeholder="Send a message…" style={{borderRadius: 8}}/>
+                                            </Form.Item>
+                                        </Form>
+                                    )}
                                 </div>
                             </Space>
 
@@ -966,11 +969,18 @@ const RoomPage: React.FC = () => {
                                         : (participants.find(p => p !== myUsername && p !== "Waiting...") ?? "Partner");
                                     
                                     return (
-                                        <div key={index} style={{padding: "8px 12px", marginBottom: 8, backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: 8, color: "white"}}>
+                                        <div key={index} style={{padding: "8px 12px", marginBottom: 8, backgroundColor: msg.client ? "#2e1065" : "#b5b5b5", borderRadius: 8, color: "white", overflowWrap: "anywhere", hyphens: "auto"}}>
                                             {msg.timestamp + ", " + senderName + " : " + msg.message}
                                         </div>
                                     );
                                 })}
+                            </div>
+                            <div style={{padding: "12px", borderTop: "1px solid #e5e7eb"}}>
+                                <Form form={form} onFinish={(values) => { sendText(values.message); form.resetFields(); }} layout="inline" style={{flex: 1, display: "flex"}}>
+                                    <Form.Item name="message" style={{flex: 1, margin: 0}}>
+                                        <Input placeholder="Send a message…" style={{borderRadius: 8}}/>
+                                    </Form.Item>
+                                </Form>
                             </div>
                         </aside>
                     )}

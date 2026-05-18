@@ -158,7 +158,7 @@ ${rendered}
                 </div>
                 <div className={mainStyles.sidebarBottom}>
                     <Tooltip title="Sign Out" placement="right">
-                        <div className={mainStyles.sbIcon} onClick={handleLogout}>
+                        <div className={`${mainStyles.sbIcon} ${mainStyles.sbIconLogout}`} onClick={handleLogout}>
                             <LogoutOutlined/>
                         </div>
                     </Tooltip>
@@ -228,6 +228,7 @@ ${rendered}
                         boxShadow: "0 4px 24px rgba(107,33,214,0.08)",
                     }}>
                         <style>{`
+    .md-body { overflow-wrap: anywhere; hyphens: auto; }
     .md-body pre { background: #f4f4f5; padding: 12px 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
     .md-body code { background: #f4f4f5; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.9em; }
     .md-body pre code { background: transparent; padding: 0; }

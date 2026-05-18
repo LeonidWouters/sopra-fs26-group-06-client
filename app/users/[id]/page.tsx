@@ -229,7 +229,7 @@ const Profile: React.FC = () => {
                 </div>
                 <div className={mainStyles.sidebarBottom}>
                     <Tooltip title="Sign Out" placement="right">
-                        <div className={mainStyles.sbIcon} onClick={handleLogout}>
+                        <div className={`${mainStyles.sbIcon} ${mainStyles.sbIconLogout}`} onClick={handleLogout}>
                             <LogoutOutlined/>
                         </div>
                     </Tooltip>

@@ -200,7 +200,7 @@ ${rendered}
                 </div>
                 <div className={mainStyles.sidebarBottom}>
                     <Tooltip title="Sign Out" placement="right">
-                        <div className={mainStyles.sbIcon} onClick={handleLogout}>
+                        <div className={`${mainStyles.sbIcon} ${mainStyles.sbIconLogout}`} onClick={handleLogout}>
                             <LogoutOutlined/>
                         </div>
                     </Tooltip>
@@ -321,6 +321,8 @@ ${rendered}
                                         display: "-webkit-box",
                                         WebkitLineClamp: 3,
                                         WebkitBoxOrient: "vertical",
+                                        overflowWrap: "anywhere",
+                                        hyphens: "auto",
                                     }}>
                                         {item.content?.trim() || "No content"}
                                     </div>
