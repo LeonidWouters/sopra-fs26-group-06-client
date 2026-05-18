@@ -150,11 +150,11 @@ const EventModal: React.FC<EventModalProps> = ({
                     rules={[{ required: true, message: "Please pick an end time" }]}>
                     <DatePicker showTime={{ minuteStep: 15 }} format="DD MMM YYYY HH:mm" style={{ width: "100%" }} />
                 </Form.Item>
-                <Form.Item hidden={!(existingEvent && existingEvent?.owner === Number(id))} /*checks ownership status*/ label="Invite Friend" name="invitedUser" rules={[{ required: true, message: "Please pick a user to invite" }]}>
+                <Form.Item hidden={existingEvent?.invitedUser === Number(id)} /*checks ownership status*/ label="Invite Friend" name="invitedUser" rules={[{ required: true, message: "Please pick a user to invite" }]}>
                     <Select
                         placeholder="Select a friend to invite"
                         style={{width: "100%"}}
-                    >
+                    >g
                         {friends.map(friend => (
                             <Select.Option key={friend.id} value={friend.id}>
                                 {friend.name} (@{friend.username})
