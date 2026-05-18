@@ -957,7 +957,7 @@ const RoomPage: React.FC = () => {
                     </div>
 
                     {chatHistory && (
-                        <aside style={{width: 320, margin: "12px 0", background: "#ffffff", borderRadius: 8, border: "1px solid #e5e7eb", display: "flex", flexDirection: "column", overflow: "hidden"}}>
+                        <aside style={{width: 320, maxHeight: "calc(100vh - 120px)", margin: "12px 0", background: "#ffffff", borderRadius: 8, border: "1px solid #e5e7eb", display: "flex", flexDirection: "column", overflow: "hidden"}}>
                             <div style={{padding: "12px 16px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center"}}>
                                 <span style={{fontWeight: 500}}><CommentOutlined style={{marginRight: 6}}/>Chat</span>
                                 <Button type="text" size="small" icon={<CloseCircleOutlined/>} onClick={closeChat}/>
